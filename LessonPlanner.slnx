@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LessonPlanner.Agents/LessonPlanner.Agents.csproj" />
+    <Project Path="src/LessonPlanner.AppHost/LessonPlanner.AppHost.csproj" />
+    <Project Path="src/LessonPlanner.Core/LessonPlanner.Core.csproj" />
+    <Project Path="src/LessonPlanner.Infrastructure/LessonPlanner.Infrastructure.csproj" />
+    <Project Path="src/LessonPlanner.Mcp/LessonPlanner.Mcp.csproj" />
+    <Project Path="src/LessonPlanner.ServiceDefaults/LessonPlanner.ServiceDefaults.csproj" />
+    <Project Path="src/LessonPlanner.Web/LessonPlanner.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/LessonPlanner.IntegrationTests/LessonPlanner.IntegrationTests.csproj" />
+    <Project Path="tests/LessonPlanner.UnitTests/LessonPlanner.UnitTests.csproj" />
+  </Folder>
+</Solution>

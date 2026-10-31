@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LessonPlanner.Core\LessonPlanner.Core.csproj" />
+    <ProjectReference Include="..\LessonPlanner.Agents\LessonPlanner.Agents.csproj" />
+    <ProjectReference Include="..\LessonPlanner.Infrastructure\LessonPlanner.Infrastructure.csproj" />
+    <ProjectReference Include="..\LessonPlanner.ServiceDefaults\LessonPlanner.ServiceDefaults.csproj" />
+    <PackageReference Include="Microsoft.Identity.Web" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+</Project>
