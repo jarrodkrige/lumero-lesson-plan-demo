@@ -1,0 +1,25 @@
+<section class="rail-section" aria-labelledby="activity-heading">
+    <h2 id="activity-heading">Activity record</h2>
+    <p class="field-hint">Saved events from this lesson run, not a live feed.</p>
+    @if (!Activities.Any())
+    {
+        <p>No activity events were recorded.</p>
+    }
+    else
+    {
+        <ol class="activity-timeline">
+            @foreach (var activity in Activities.OrderBy(item => item.Timestamp))
+            {
+                <li>
+                    <strong>@DisplayText.Role(activity.Role)</strong>
+                    <span class="activity-state">@DisplayText.State(activity.State)</span>
+                    <time datetime="@DisplayText.Timestamp(activity.Timestamp)">@DisplayText.Date(activity.Timestamp)</time>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    [Parameter] public IEnumerable<ActivityEvent> Activities { get; set; } = [];
+}

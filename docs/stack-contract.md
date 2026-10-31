@@ -20,7 +20,7 @@ The web and MCP executables each listen on container port **8080**. The MCP serv
 
 Configuration names reserved for integration:
 
-- `AzureAd__Instance`, `AzureAd__TenantId`, `AzureAd__ClientId`: presenter single-tenant OpenID Connect. Supply a supported confidential-client certificate or managed-identity federated assertion through Microsoft.Identity.Web configuration; no client secrets in source.
+- `AzureAd__Instance`, `AzureAd__TenantId`, `AzureAd__ClientId`: presenter single-tenant OpenID Connect. Production requires `AzureAd__ClientCredentials__0__SourceType=SignedAssertionFromManagedIdentity` and an authorised confidential-client federation relationship. Set `AzureAd__ClientCredentials__0__ManagedIdentityClientId` for a user-assigned identity. Explicit certificate-path credentials are local-only; client secrets and legacy fallback collections are rejected.
 - `Presenter__AllowedObjectIds__0`: explicit presenter object allowlist, checked in server operations.
 - `Mcp__Endpoint`: absolute HTTPS URL ending in `/mcp`.
 - `Mcp__Audience`, `Mcp__TenantId`, `Mcp__CallerClientId`, `Mcp__RequiredRole` (default `Quiz.Publish`): distinct API audience, issuer, calling web managed-identity client ID and required application role.
@@ -29,6 +29,7 @@ Configuration names reserved for integration:
 - `Storage__TableServiceUri`, `Storage__TableName` (default `lessonplanner`), `Storage__ManagedIdentityClientId`: Entra Azure Table access. The Table must exist before production startup.
 - `Storage__ConnectionString`: development emulator only, rejected outside Development/Testing and limited to loopback Azurite. Not a production key option.
 - `DataProtection__BlobUri`: durable cookie/CSRF key ring. `DataProtection__ManagedIdentityClientId`: Blob identity. Provision the private container separately.
+- `ReverseProxy__KnownNetworks__0`: explicit trusted ingress CIDR. The Web service accepts forwarded protocol and client address through one trusted hop. Do not trust an Internet-wide network.
 - `Foundry__Endpoint`: Azure OpenAI v1 HTTPS model endpoint for application-hosted inference. `Foundry__Deployment`, `Foundry__ManagedIdentityClientId`: approved deployment and identity. No model endpoint or credentials are sent to browsers.
 - `Quiz__PublicBaseUrl`: canonical externally reachable HTTPS web origin, never derived from a request Host header. `Quiz__LifetimeHours` defaults to 24; `Quiz__ApprovalMinutes` defaults to 5; `Quiz__MaximumAttempts` defaults to 200.
 

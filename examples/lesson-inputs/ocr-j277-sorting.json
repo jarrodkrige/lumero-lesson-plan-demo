@@ -1,0 +1,6 @@
+{
+  "Topic": "Tracing bubble, insertion and merge sorts",
+  "EducationalLevel": "GCSE (OCR J277)",
+  "DurationMinutes": 60,
+  "Instructions": "Plan an original lesson on tracing and comparing bubble sort, insertion sort and merge sort for OCR J277. Use the robot finish times [24, 11, 19, 15, 11] in seconds; a smaller time finishes earlier and equal times are retained. State the direction and stopping rule for each pass. Include one worked trace, paired practice, a check that no value is lost and five single-choice questions with four options each. Distinguish a partially completed pass from a fully sorted list. Use British English, short sentences and high-contrast text tables that do not rely on colour. Offer a seated card or keyboard activity, an untimed route and an extension comparing comparisons and swaps. Treat all times as fictional, use no pupil names or data, and ask a teacher to check curriculum coverage and accessibility before teaching. Do not assume that a generated answer has been verified."
+}

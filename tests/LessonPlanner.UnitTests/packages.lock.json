@@ -411,6 +411,12 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "gradingpolicyworkshop": {
+        "type": "Project",
+        "dependencies": {
+          "LessonPlanner.Core": "[1.0.0, )"
+        }
+      },
       "lessonplanner.agents": {
         "type": "Project",
         "dependencies": {
@@ -433,6 +439,8 @@
           "Azure.Identity": "[1.21.0, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
           "LessonPlanner.Core": "[1.0.0, )",
+          "ModelContextProtocol": "[2.3.0, )",
+          "PdfPig": "[0.1.16, )",
           "QRCoder": "[1.8.1, )"
         }
       },
@@ -543,6 +551,12 @@
           "Microsoft.Extensions.Hosting.Abstractions": "10.0.13",
           "ModelContextProtocol.Core": "[2.3.0]"
         }
+      },
+      "PdfPig": {
+        "type": "CentralTransitive",
+        "requested": "[0.1.16, )",
+        "resolved": "0.1.16",
+        "contentHash": "qQcbsNMYVY+K5ELptax2S8thNMk0+rSQq3H/KdYj3LLcko8yTCz8y5KIvsKxIyAuTN0ZYNnfsZkM+0EvxTwHVA=="
       },
       "QRCoder": {
         "type": "CentralTransitive",

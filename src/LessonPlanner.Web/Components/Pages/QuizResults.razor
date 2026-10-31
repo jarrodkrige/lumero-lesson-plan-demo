@@ -1,0 +1,59 @@
+@page "/quiz/{Id}/results/{AttemptId}"
+@attribute [AllowAnonymous]
+@inherits ResourcePage
+@inject IQuizStore QuizStore
+
+<PageTitle>Your quiz results | Lumero</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+@if (_result is null)
+{
+    <UnavailableState Title="Results unavailable"
+                      Message="This results link could not be found. Check the link you received after submitting your answers, or ask your teacher for help." />
+}
+else
+{
+    <div class="quiz-page">
+        <header class="page-heading result-heading">
+            <h1>Your quiz results</h1>
+            <p class="result-score"><strong>@_result.Score</strong><span>out of @_result.Total</span></p>
+            <p class="lede preserve-lines">@_result.Feedback</p>
+            <p class="field-hint">Submitted <time datetime="@DisplayText.Timestamp(_result.SubmittedAt)">@DisplayText.Date(_result.SubmittedAt)</time></p>
+        </header>
+        <div class="privacy-note"><p>Keep this results link private. Anyone with the link can view this attempt.</p></div>
+        <article class="paper" aria-label="Answer feedback">
+            <ol class="result-questions">
+                @for (var index = 0; index < _result.Questions.Length; index++)
+                {
+                    var question = _result.Questions[index];
+                    <li>
+                        <section aria-labelledby="@($"result-question-{index}")">
+                            <div class="result-question-heading"><h2 id="@($"result-question-{index}")">Question @(index + 1)</h2><span class="status-label @(question.IsCorrect ? "status-success" : "status-warning")">@(question.IsCorrect ? "Correct" : "Incorrect")</span></div>
+                            <p class="question-prompt">@question.Prompt</p>
+                            <dl class="marked-answers">
+                                <div><dt>Your answer</dt><dd>@question.SelectedOptionId</dd></div>
+                                <div><dt>Correct answer</dt><dd>@question.CorrectOptionId</dd></div>
+                            </dl>
+                            <div class="answer-explanation"><h3>Marking explanation</h3><p class="preserve-lines">@question.Explanation</p></div>
+                        </section>
+                    </li>
+                }
+            </ol>
+        </article>
+        <p class="after-paper"><a href="@($"/quiz/{RouteId(Id)}")">Return to quiz</a></p>
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    [Parameter] public string AttemptId { get; set; } = string.Empty;
+    private QuizResult? _result;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _result = null;
+        try { _result = await QuizStore.FindResultAsync(Id, AttemptId, RequestCancellation); }
+        catch (DomainException) { }
+        if (_result is null) { SetStatusCode(StatusCodes.Status404NotFound); }
+    }
+}

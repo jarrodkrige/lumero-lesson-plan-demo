@@ -1,0 +1,12 @@
+<section class="empty-state" aria-labelledby="unavailable-title">
+    <h1 id="unavailable-title">@Title</h1>
+    <p class="lede">@Message</p>
+    <a class="button button-secondary" href="@Link">@LinkText</a>
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Page unavailable";
+    [Parameter] public string Message { get; set; } = "Check the link and try again.";
+    [Parameter] public string Link { get; set; } = "/";
+    [Parameter] public string LinkText { get; set; } = "Return home";
+}

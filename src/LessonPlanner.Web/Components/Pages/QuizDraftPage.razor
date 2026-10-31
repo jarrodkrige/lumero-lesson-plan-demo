@@ -1,0 +1,150 @@
+@page "/presenter/drafts/{Id}"
+@attribute [Authorize(Policy = "Presenter")]
+@inherits ResourcePage
+@inject PresenterAccess Presenter
+@inject IQuizStore QuizStore
+@inject LessonPlanner.Infrastructure.QuizPolicy PublicationPolicy
+@inject LessonPlanner.Web.Services.QuizLinkVerifier LinkVerifier
+
+<PageTitle>Review quiz | Lumero</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+@if (_draft is null)
+{
+    <UnavailableState Title="Quiz draft unavailable"
+                      Message="This draft could not be found or is not available to your presenter account. Return to your lesson workbench to continue."
+                      Link="/presenter" LinkText="Lesson workbench" />
+}
+else
+{
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/presenter">Lesson workbench</a><a href="@($"/presenter/lessons/{RouteId(_draft.LessonId)}")">Lesson review</a><span>Quiz review</span></nav>
+    <header class="page-heading">
+        <p class="status-label @(_published is not null ? "status-success" : "status-neutral")">@(_published is not null ? "Published quiz" : "Private quiz draft")</p>
+        <h1>@_draft.Content.Title</h1>
+        <p class="lede">Check every question, answer and explanation. The answer key below is for the presenter, not the pupil quiz page.</p>
+        <dl class="lesson-facts">
+            <div><dt>Draft version</dt><dd>@_draft.Version</dd></div>
+            <div><dt>Questions</dt><dd>@_draft.Content.Questions.Length</dd></div>
+            <div><dt>Created</dt><dd><time datetime="@DisplayText.Timestamp(_draft.CreatedAt)">@DisplayText.Date(_draft.CreatedAt)</time></dd></div>
+        </dl>
+    </header>
+    <PageNotice Message="@ErrorMessage" />
+
+    <div class="workbench-grid">
+        <article class="paper" aria-label="Private quiz review">
+            <ol class="draft-questions">
+                @for (var index = 0; index < _draft.Content.Questions.Length; index++)
+                {
+                    var question = _draft.Content.Questions[index];
+                    <li>
+                        <section aria-labelledby="@($"draft-question-{index}")">
+                            <h2 id="@($"draft-question-{index}")">Question @(index + 1)</h2>
+                            <p class="question-prompt">@question.Prompt</p>
+                            <ol class="review-options">
+                                @foreach (var option in question.Options)
+                                {
+                                    var isCorrect = option.Id == question.CorrectOptionId;
+                                    <li class="@(isCorrect ? "correct-option" : null)">
+                                        <span class="option-key">@option.Id</span><span>@option.Text</span>
+                                        @if (isCorrect) { <strong class="correct-label">Correct answer</strong> }
+                                    </li>
+                                }
+                            </ol>
+                            <div class="answer-explanation"><h3>Marking explanation</h3><p class="preserve-lines">@question.Explanation</p></div>
+                            <SourceLinks SourceIds="question.SourceIds" Sources="_draft.Sources" />
+                        </section>
+                    </li>
+                }
+            </ol>
+            <SourceCitations Sources="_draft.Sources" />
+        </article>
+        <aside class="planning-rail" aria-label="Quiz review and publication">
+            <ReviewSummary Review="_draft.Review" />
+            @if (_published is not null)
+            {
+                <section class="rail-section publication-receipt" aria-labelledby="publication-heading">
+                    <h2 id="publication-heading">Publication confirmed</h2>
+                    <p>This quiz has been published. Approval is no longer required for this draft.</p>
+                    @if (_isReachable)
+                    {
+                        <p><a class="public-quiz-url" href="@_canonicalUrl">@_canonicalUrl</a></p>
+                        <img class="quiz-qr" src="@($"/presenter/drafts/{RouteId(Id)}/qr")" width="224" height="224" alt="QR code to open the published pupil quiz. The same link is shown above." />
+                        <p class="field-hint">Share this link or QR code with your class.</p>
+                    }
+                    else
+                    {
+                        <p class="public-quiz-url">@_canonicalUrl</p>
+                        <div class="notice notice-warning" role="status">
+                            <h3>Link not yet verified</h3>
+                            <p>Publication is saved, but the pupil page could not be reached. No QR code is shown. Refresh this page to check again before sharing.</p>
+                        </div>
+                    }
+                    <p class="field-hint">Quiz expires <time datetime="@DisplayText.Timestamp(_published.ExpiresAt)">@DisplayText.Date(_published.ExpiresAt)</time>.</p>
+                    <a href="@($"/presenter/drafts/{RouteId(Id)}")">Check published link again</a>
+                </section>
+            }
+            else if (CanApprove)
+            {
+                <section class="rail-section approval-section" aria-labelledby="approval-heading">
+                    <h2 id="approval-heading">Your approval publishes the quiz</h2>
+                    <p>Approval lets the Publisher Agent call the real quiz publication tool through MCP. A pupil link and QR code appear only after publication and a successful link check.</p>
+                    <form method="post" action="@($"/presenter/drafts/{RouteId(Id)}/publish")" aria-label="Approve quiz publication">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="version" value="@_draft.Version" />
+                        <input type="hidden" name="payloadHash" value="@_draft.PayloadHash" />
+                        <div class="approval-choice">
+                            <input id="acknowledged" name="acknowledged" type="checkbox" value="yes" required />
+                            <label for="acknowledged">I have checked all five questions, answers and explanations, and approve this version for publication.</label>
+                        </div>
+                        <button class="button full-width" type="submit">Approve and publish quiz</button>
+                    </form>
+                </section>
+            }
+            else
+            {
+                <section class="rail-section"><h2>Not ready for publication</h2><p>A quiz must contain exactly five questions and pass review. Return to the lesson to create a new draft.</p><a href="@($"/presenter/lessons/{RouteId(_draft.LessonId)}")">Return to lesson</a></section>
+            }
+        </aside>
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    [SupplyParameterFromQuery(Name = "error")] public string? Error { get; set; }
+    private QuizDraft? _draft;
+    private PublicQuiz? _published;
+    private string? _canonicalUrl;
+    private bool _isReachable;
+    private bool CanApprove => _draft is { Review.Accepted: true } && !_draft.Content.Questions.IsDefaultOrEmpty && _draft.Content.Questions.Length == ContractVersions.QuestionCount;
+    private string? ErrorMessage => Error switch
+    {
+        "approval" => "Review all five questions and select the approval checkbox. If this draft has changed, reload the page before approving its current version.",
+        "publication" => "Publication could not be confirmed. Check the status below before trying again. Do not share a quiz until publication and its pupil link are confirmed.",
+        "service" => "The publication service could not complete the request. Reload this page to check the saved publication status before trying again.",
+        _ => null
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _draft = null;
+        _published = null;
+        _canonicalUrl = null;
+        _isReachable = false;
+        try
+        {
+            _draft = await QuizStore.FindDraftAsync(Id, Presenter.RequireIdentity(), RequestCancellation);
+            if (_draft is not null) { _published = await QuizStore.FindPublishedAsync(Id, RequestCancellation); }
+        }
+        catch (DomainException) { _draft = null; }
+        if (_draft is null)
+        {
+            SetStatusCode(StatusCodes.Status404NotFound);
+            return;
+        }
+        if (_published is not null)
+        {
+            _canonicalUrl = PublicationPolicy.PublicUrl(Id).ToString();
+            _isReachable = await LinkVerifier.IsReachableAsync(Id, RequestCancellation);
+        }
+    }
+}

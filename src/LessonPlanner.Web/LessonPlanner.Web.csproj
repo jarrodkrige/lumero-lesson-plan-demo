@@ -13,6 +13,7 @@
     <ProjectReference Include="..\LessonPlanner.Infrastructure\LessonPlanner.Infrastructure.csproj" />
     <ProjectReference Include="..\LessonPlanner.ServiceDefaults\LessonPlanner.ServiceDefaults.csproj" />
     <PackageReference Include="Microsoft.Identity.Web" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
   </ItemGroup>
 </Project>

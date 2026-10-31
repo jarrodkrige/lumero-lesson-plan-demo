@@ -1,0 +1,109 @@
+@page "/presenter"
+@attribute [Authorize(Policy = "Presenter")]
+@inject PresenterAccess Presenter
+
+<PageTitle>Plan a lesson | Lumero</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+<header class="page-heading">
+    <h1>Plan a computing lesson</h1>
+    <p class="lede">Set the teaching brief. Review the lesson and its sources, then decide whether to publish a five-question quiz.</p>
+</header>
+
+<PageNotice Message="@ErrorMessage" />
+
+<div class="workbench-grid">
+    <section class="paper" aria-labelledby="request-heading">
+        <div class="section-heading">
+            <h2 id="request-heading">Lesson request</h2>
+            <p>All fields are required unless marked optional.</p>
+        </div>
+        <form method="post" action="/presenter/lessons" aria-label="Lesson request">
+            <AntiforgeryToken />
+            <div class="form-field">
+                <label for="topic">Topic</label>
+                <p class="field-hint" id="topic-hint">Choose a focused computing topic. Maximum 120 characters.</p>
+                <input id="topic" name="Topic" type="text" value="@Topic" maxlength="120" required aria-describedby="topic-hint" />
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label for="educational-level">Educational level</label>
+                    <select id="educational-level" name="EducationalLevel" required>
+                        <option value="GCSE (OCR J277)" selected="@(EducationalLevel == "GCSE (OCR J277)")">GCSE (OCR J277)</option>
+                        <option value="Key Stage 3" selected="@(EducationalLevel == "Key Stage 3")">Key Stage 3</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label for="duration">Duration in minutes</label>
+                    <input id="duration" name="DurationMinutes" type="number" min="20" max="120" step="1" value="60" required aria-describedby="duration-hint" />
+                    <p class="field-hint" id="duration-hint">Between 20 and 120 minutes.</p>
+                </div>
+            </div>
+            <div class="form-field">
+                <label for="instructions">Teaching instructions <span class="optional">(optional)</span></label>
+                <p class="field-hint" id="instructions-hint">Include prior learning, available equipment or support needs. Do not include personal details. Maximum 1,000 characters.</p>
+                <textarea id="instructions" name="Instructions" rows="6" maxlength="1000" aria-describedby="instructions-hint">@Instructions</textarea>
+            </div>
+            <div class="form-actions">
+                <button class="button" type="submit">Create lesson plan</button>
+                <p>The lesson must pass review before a quiz can be created.</p>
+            </div>
+        </form>
+    </section>
+
+    <aside class="planning-rail" aria-labelledby="examples-heading">
+        <section>
+            <h2 id="examples-heading">Start with an example</h2>
+            <p>Original teaching briefs you can adapt to your class. These are requests, not completed lessons.</p>
+            <div class="example-brief">
+                <h3>Sorting algorithms</h3>
+                <p>Trace bubble, insertion and merge sort using a short list of numbers. Compare how each algorithm organises the same data.</p>
+                <a href="/presenter?example=sorting">Use the sorting example</a>
+            </div>
+            <div class="example-brief">
+                <h3>Robot sports day</h3>
+                <p>Write a precise sequence for a robot relay. Test instructions on a floor grid, then find and fix an incorrect turn.</p>
+                <a href="/presenter?example=robots">Use the robot sports day example</a>
+            </div>
+        </section>
+        <section class="rail-section">
+            <h2>Before the classroom</h2>
+            <ol class="process-list">
+                <li><strong>Check the lesson.</strong> Read the timings, teaching activities and cited sources.</li>
+                <li><strong>Review five questions.</strong> Check every choice, answer and marking explanation.</li>
+                <li><strong>Approve publication.</strong> Share the pupil link only after publication is confirmed.</li>
+            </ol>
+        </section>
+    </aside>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "example")] public string? Example { get; set; }
+    [SupplyParameterFromQuery(Name = "error")] public string? Error { get; set; }
+
+    private string Topic => Example switch
+    {
+        "sorting" => "Sorting algorithms: bubble, insertion and merge sort",
+        "robots" => "Robot sports day: sequencing precise instructions",
+        _ => string.Empty
+    };
+
+    private string EducationalLevel => Example == "robots" ? "Key Stage 3" : "GCSE (OCR J277)";
+
+    private string Instructions => Example switch
+    {
+        "sorting" => "Use the original example list 8, 3, 5, 1 to trace each algorithm. Ask pupils to explain comparisons and movements, then choose a suitable approach for another short list. Include a worked example, paired practice and an independent check.",
+        "robots" => "Use a floor grid and a pupil acting as a robot. Plan a relay using forward steps and quarter turns. Pupils predict the route, test a sequence, debug one incorrect instruction and explain why order matters. No physical robot is required.",
+        _ => string.Empty
+    };
+
+    private string? ErrorMessage => Error switch
+    {
+        "validation" => "Check the topic, educational level and lesson length. Keep the topic within 120 characters and teaching instructions within 1,000 characters, then try again.",
+        "service" => "The lesson request could not be completed. Try again in a moment. If this continues, contact the person who manages your lesson workbench.",
+        "busy" => "The lesson service is busy. Wait a moment before sending another request.",
+        _ => null
+    };
+
+    protected override void OnInitialized() => Presenter.RequireIdentity();
+}

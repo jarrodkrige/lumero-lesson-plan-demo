@@ -1,0 +1,6 @@
+{
+  "Topic": "Robot sports day: sorting times and explaining interfaces",
+  "EducationalLevel": "Key Stage 3",
+  "DurationMinutes": 50,
+  "Instructions": "Create an accessible robot sports day lesson using fictional robots Pip, Luma, Moss and Kite with finish times of 18, 12, 18 and 15 seconds. Smaller times finish earlier; keep both 18-second results and discuss a tie without ranking pupils. Pupils can stay seated, move printed cards, use a keyboard or describe a choice aloud. Do not require running, owning a robot, colour vision or fast responses. Model one left-to-right bubble-sort pass with a labelled text trace, then finish sorting in pairs. Explain that an interface describes what an object can do, while different classes can do it differently; use a timer or feedback-rule analogy, not an assumed OCR requirement. Include a check that sorting keeps every item, five single-choice questions with four options each, reading scaffolds and an optional C# discussion for teachers. Use British English and no real pupil data. State that teacher review is required."
+}

@@ -1,0 +1,93 @@
+@page "/quiz/{Id}"
+@attribute [AllowAnonymous]
+@inherits ResourcePage
+@inject IQuizStore QuizStore
+@inject ParticipantTickets Tickets
+
+<PageTitle>@(_quiz?.Title ?? "Quiz unavailable") | Lumero</PageTitle>
+<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+
+@if (_quiz is null)
+{
+    <UnavailableState Title="Quiz unavailable"
+                      Message="This quiz is not available. It may not have been published or may have expired. Ask your teacher for a current quiz link." />
+}
+else
+{
+    <div class="quiz-page">
+        <header class="page-heading">
+            <h1>@_quiz.Title</h1>
+            <p class="lede">Five questions. Choose one answer for each, then submit to see your results.</p>
+            <p class="privacy-note">No name, email address or pupil account is needed.</p>
+            <p class="field-hint">Available until <time datetime="@DisplayText.Timestamp(_quiz.ExpiresAt)">@DisplayText.Date(_quiz.ExpiresAt)</time>.</p>
+        </header>
+        <PageNotice Message="@ErrorMessage" />
+        <form class="paper quiz-form" method="post" action="@($"/quiz/{RouteId(Id)}/submit")" aria-label="Classroom quiz">
+            <AntiforgeryToken />
+            <input type="hidden" name="attempt" value="@_attemptId" />
+            <input type="hidden" name="ticket" value="@_ticketToken" />
+            @for (var index = 0; index < _quiz.Questions.Length; index++)
+            {
+                var question = _quiz.Questions[index];
+                <fieldset class="quiz-question">
+                    <legend><span class="question-number">Question @(index + 1) of 5</span><span class="question-prompt">@question.Prompt</span></legend>
+                    <div class="answer-options">
+                        @for (var optionIndex = 0; optionIndex < question.Options.Length; optionIndex++)
+                        {
+                            var option = question.Options[optionIndex];
+                            var inputId = $"answer-{index}-{optionIndex}";
+                            <label class="answer-option" for="@inputId">
+                                <input id="@inputId" type="radio" name="@($"answer-{question.Id}")" value="@option.Id" required />
+                                <span class="option-key" aria-hidden="true">@option.Id</span><span>@option.Text</span>
+                            </label>
+                        }
+                    </div>
+                </fieldset>
+            }
+            <div class="form-actions">
+                <button class="button" type="submit">Submit answers</button>
+                <p>Check your choices first. Submitting saves this attempt and shows your feedback.</p>
+            </div>
+        </form>
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    [SupplyParameterFromQuery(Name = "error")] public string? Error { get; set; }
+    private PublicQuiz? _quiz;
+    private string? _attemptId;
+    private string? _ticketToken;
+    private string? ErrorMessage => Error switch
+    {
+        "answers" => "Choose one answer for every question, then submit again. Your previous choices have not been kept on this page.",
+        "expired" => "The quiz or answer form has expired. Open the quiz link again, or ask your teacher for a current link.",
+        "full" => "This quiz has reached its submission limit. Ask your teacher for another quiz.",
+        "service" => "Your submission could not be confirmed. Check with your teacher before trying again.",
+        _ => null
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _quiz = null;
+        _attemptId = null;
+        _ticketToken = null;
+        try
+        {
+            var quiz = await QuizStore.FindPublishedAsync(Id, RequestCancellation);
+            if (quiz is not null && quiz.ExpiresAt > DateTimeOffset.UtcNow && !quiz.Questions.IsDefaultOrEmpty && quiz.Questions.Length == ContractVersions.QuestionCount)
+            {
+                var ticket = Tickets.Issue(Id, quiz.ExpiresAt);
+                _attemptId = ticket.Id;
+                _ticketToken = ticket.Token;
+                _quiz = quiz;
+                if (RequestContext.HttpContext?.Response is { HasStarted: false } response)
+                {
+                    response.Headers["X-Lumero-Quiz-Id"] = quiz.Id;
+                }
+            }
+        }
+        catch (DomainException) { _quiz = null; }
+        if (_quiz is null) { SetStatusCode(StatusCodes.Status404NotFound); }
+    }
+}

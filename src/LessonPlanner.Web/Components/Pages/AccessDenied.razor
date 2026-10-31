@@ -1,0 +1,12 @@
+@page "/access-denied"
+@attribute [AllowAnonymous]
+@inherits ResourcePage
+
+<PageTitle>Presenter access unavailable | Lumero</PageTitle>
+<UnavailableState Title="This account does not have presenter access"
+                  Message="The lesson workbench is limited to the approved teaching group. Sign in with an approved account, or ask the person who manages the workbench to check your access. Pupil quiz links do not require presenter access."
+                  Link="/auth/sign-in" LinkText="Presenter sign-in" />
+
+@code {
+    protected override void OnInitialized() => SetStatusCode(StatusCodes.Status403Forbidden);
+}

@@ -480,3 +480,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local verification state and captured evidence
+.local/
+.playwright/
+.env.*
+!.env.example

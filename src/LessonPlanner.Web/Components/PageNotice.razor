@@ -1,0 +1,12 @@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="notice notice-warning" role="alert">
+        <h2>@Title</h2>
+        <p>@Message</p>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string Title { get; set; } = "Check before continuing";
+}

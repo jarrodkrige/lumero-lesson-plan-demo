@@ -1,0 +1,11 @@
+{
+  "name": "lumero-lesson-planner-local-verification",
+  "private": true,
+  "description": "Local-only Azure Storage emulator for the reference application's integration tests",
+  "scripts": {
+    "emulator": "azurite-table --silent --disableTelemetry --location .local/azurite --tableHost 127.0.0.1 --tablePort 11002"
+  },
+  "devDependencies": {
+    "azurite": "3.36.0"
+  }
+}

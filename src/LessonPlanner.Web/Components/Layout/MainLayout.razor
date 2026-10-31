@@ -1,3 +1,36 @@
 ﻿@inherits LayoutComponentBase
 
-@Body
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="site-header">
+    <div class="site-header-inner">
+        <a class="wordmark" href="/" aria-label="Lumero home">Lumero</a>
+        <span class="site-description">Computing lesson workbench</span>
+        <nav class="site-navigation" aria-label="Main navigation">
+            <AuthorizeView>
+                <Authorized>
+                    <AuthorizeView Policy="Presenter" Context="presenterState">
+                        <Authorized>
+                            <NavLink href="/presenter">Lesson workbench</NavLink>
+                        </Authorized>
+                    </AuthorizeView>
+                    <form method="post" action="/auth/sign-out">
+                        <AntiforgeryToken />
+                        <button class="text-button" type="submit">Sign out</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/auth/sign-in">Presenter sign-in</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </nav>
+    </div>
+</header>
+
+<main id="main-content" class="page-shell" tabindex="-1">
+    @Body
+</main>
+
+<footer class="site-footer">
+    <p>Teacher review comes before publication.</p>
+    <p>Classroom quizzes do not ask for pupil names or email addresses.</p>
+</footer>

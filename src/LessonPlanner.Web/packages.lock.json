@@ -2,6 +2,16 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "Azure.Extensions.AspNetCore.DataProtection.Blobs": {
+        "type": "Direct",
+        "requested": "[1.5.5, )",
+        "resolved": "1.5.5",
+        "contentHash": "pefN8zv9YivaXRkJZKk4rd1jnyVryjLvLfdHrzUy1OWZ8sHr4YZPoRBVbksF1PBbsuDhBzkMQmHcgz2cfQzKZw==",
+        "dependencies": {
+          "Azure.Core": "1.63.0",
+          "Azure.Storage.Blobs": "12.26.0"
+        }
+      },
       "Microsoft.AspNetCore.App.Internal.Assets": {
         "type": "Direct",
         "requested": "[10.0.14, )",
@@ -428,6 +438,8 @@
           "Azure.Identity": "[1.21.0, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
           "LessonPlanner.Core": "[1.0.0, )",
+          "ModelContextProtocol": "[2.3.0, )",
+          "PdfPig": "[0.1.16, )",
           "QRCoder": "[1.8.1, )"
         }
       },
@@ -447,16 +459,6 @@
         "contentHash": "t20e1MY25kUucbHTTyIl1wtwdSxJiPQKhb6wfDh1HkePTpazVPHZ3NJWsZ5RlM9aSrmRqGhy/1Z80siOWeShcA==",
         "dependencies": {
           "Azure.Core": "1.62.0"
-        }
-      },
-      "Azure.Extensions.AspNetCore.DataProtection.Blobs": {
-        "type": "CentralTransitive",
-        "requested": "[1.5.5, )",
-        "resolved": "1.5.5",
-        "contentHash": "pefN8zv9YivaXRkJZKk4rd1jnyVryjLvLfdHrzUy1OWZ8sHr4YZPoRBVbksF1PBbsuDhBzkMQmHcgz2cfQzKZw==",
-        "dependencies": {
-          "Azure.Core": "1.63.0",
-          "Azure.Storage.Blobs": "12.26.0"
         }
       },
       "Azure.Identity": {
@@ -580,6 +582,12 @@
         "dependencies": {
           "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.20.1, 2.0.0)"
         }
+      },
+      "PdfPig": {
+        "type": "CentralTransitive",
+        "requested": "[0.1.16, )",
+        "resolved": "0.1.16",
+        "contentHash": "qQcbsNMYVY+K5ELptax2S8thNMk0+rSQq3H/KdYj3LLcko8yTCz8y5KIvsKxIyAuTN0ZYNnfsZkM+0EvxTwHVA=="
       },
       "QRCoder": {
         "type": "CentralTransitive",

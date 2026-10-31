@@ -1,0 +1,22 @@
+@if (SourceIds.Any())
+{
+    <ul class="source-links" aria-label="Supporting sources">
+        @foreach (var sourceId in SourceIds.Distinct(StringComparer.Ordinal))
+        {
+            var source = Sources.FirstOrDefault(candidate => candidate.Id == sourceId);
+            if (source is not null)
+            {
+                <li><a href="@($"#source-{Uri.EscapeDataString(source.Id)}")">@source.Title</a></li>
+            }
+            else
+            {
+                <li>Source reference unavailable</li>
+            }
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public IEnumerable<string> SourceIds { get; set; } = [];
+    [Parameter] public IEnumerable<SourceReference> Sources { get; set; } = [];
+}

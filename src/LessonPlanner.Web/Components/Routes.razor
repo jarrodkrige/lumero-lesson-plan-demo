@@ -1,6 +1,11 @@
 ﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <UnavailableState Title="Presenter access required"
+                                  Message="Sign in with an approved teaching account to use the lesson workbench."
+                                  Link="/auth/sign-in" LinkText="Presenter sign-in" />
+            </NotAuthorized>
+        </AuthorizeRouteView>
     </Found>
 </Router>
