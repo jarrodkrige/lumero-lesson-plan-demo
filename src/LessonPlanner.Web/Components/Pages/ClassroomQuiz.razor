@@ -30,7 +30,7 @@ else
             {
                 var question = _quiz.Questions[index];
                 <fieldset class="quiz-question">
-                    <legend><span class="question-number">Question @(index + 1) of 5</span><span class="question-prompt">@question.Prompt</span></legend>
+                    <legend><span class="question-number">Question @(index + 1) of 5</span>@(" ")<span class="question-prompt">@question.Prompt</span></legend>
                     <div class="answer-options">
                         @for (var optionIndex = 0; optionIndex < question.Options.Length; optionIndex++)
                         {
@@ -38,7 +38,7 @@ else
                             var inputId = $"answer-{index}-{optionIndex}";
                             <label class="answer-option" for="@inputId">
                                 <input id="@inputId" type="radio" name="@($"answer-{question.Id}")" value="@option.Id" required />
-                                <span class="option-key" aria-hidden="true">@option.Id</span><span>@option.Text</span>
+                                <span class="option-key" aria-hidden="true">@option.Id</span>@(" ")<span>@option.Text</span>
                             </label>
                         }
                     </div>

@@ -19,12 +19,12 @@ Original teaching material for six secondary computer science teachers attending
 Run these PowerShell commands from the repository root with the pinned .NET SDK **10.0.403** installed. The example targets `net10.0`, inherits warnings-as-errors and references only `LessonPlanner.Core`. It adds no NuGet packages.
 
 ```powershell
-dotnet restore .\examples\GradingPolicyWorkshop\GradingPolicyWorkshop.csproj --locked-mode --source .\examples -p:NuGetAudit=false
+dotnet restore .\examples\GradingPolicyWorkshop\GradingPolicyWorkshop.csproj --locked-mode
 dotnet build .\examples\GradingPolicyWorkshop\GradingPolicyWorkshop.csproj --no-restore
 dotnet run --project .\examples\GradingPolicyWorkshop\GradingPolicyWorkshop.csproj --no-build -- 3
 ```
 
-The local restore source above prevents a feed lookup for this package-free console example. SDK installation and any restoration of the existing test packages are preparation, not part of the offline classroom run. A missing SDK or uncached test package must be prepared before the workshop.
+Restore and SDK installation are preparation and can require an approved package feed. Auditing remains enabled. After preparation, the `--no-restore` build and `--no-build` run work offline for this package-free console example. Restore the existing test packages before the workshop as well; an uncached dependency is not part of the offline classroom run.
 
 Expected output for `3`:
 

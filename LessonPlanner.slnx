@@ -2,6 +2,9 @@
   <Folder Name="/examples/">
     <Project Path="examples/GradingPolicyWorkshop/GradingPolicyWorkshop.csproj" />
   </Folder>
+  <Folder Name="/probes/">
+    <Project Path="probes/LessonPlanner.FoundryHostProbe/LessonPlanner.FoundryHostProbe.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/LessonPlanner.Agents/LessonPlanner.Agents.csproj" />
     <Project Path="src/LessonPlanner.AppHost/LessonPlanner.AppHost.csproj" />
@@ -12,6 +15,7 @@
     <Project Path="src/LessonPlanner.Web/LessonPlanner.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/LessonPlanner.FoundryHostProbe.Tests/LessonPlanner.FoundryHostProbe.Tests.csproj" />
     <Project Path="tests/LessonPlanner.IntegrationTests/LessonPlanner.IntegrationTests.csproj" />
     <Project Path="tests/LessonPlanner.LocalHarness/LessonPlanner.LocalHarness.csproj" />
     <Project Path="tests/LessonPlanner.UnitTests/LessonPlanner.UnitTests.csproj" />

@@ -45,8 +45,8 @@ else
                                 {
                                     var isCorrect = option.Id == question.CorrectOptionId;
                                     <li class="@(isCorrect ? "correct-option" : null)">
-                                        <span class="option-key">@option.Id</span><span>@option.Text</span>
-                                        @if (isCorrect) { <strong class="correct-label">Correct answer</strong> }
+                                        <span class="option-key">@option.Id</span>@(" ")<span>@option.Text</span>
+                                        @if (isCorrect) { @(" ")<strong class="correct-label">Correct answer</strong> }
                                     </li>
                                 }
                             </ol>
@@ -87,7 +87,7 @@ else
             {
                 <section class="rail-section approval-section" aria-labelledby="approval-heading">
                     <h2 id="approval-heading">Your approval publishes the quiz</h2>
-                    <p>Approval lets the Publisher Agent call the real quiz publication tool through MCP. A pupil link and QR code appear only after publication and a successful link check.</p>
+                    <p>Approval lets the Publisher Agent call the real quiz publication tool through MCP. The canonical pupil link appears after publication, with a warning if it cannot be reached. Only the QR code depends on a successful link check.</p>
                     <form method="post" action="@($"/presenter/drafts/{RouteId(Id)}/publish")" aria-label="Approve quiz publication">
                         <AntiforgeryToken />
                         <input type="hidden" name="version" value="@_draft.Version" />

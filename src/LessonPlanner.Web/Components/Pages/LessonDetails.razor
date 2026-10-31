@@ -69,7 +69,7 @@ else
                             var startMinute = elapsedMinutes;
                             elapsedMinutes += activity.DurationMinutes;
                             <li>
-                                <div class="time-block"><strong>@startMinute to @elapsedMinutes</strong><span>minutes</span></div>
+                                <div class="time-block"><strong>@startMinute to @elapsedMinutes</strong>@(" ")<span>minutes</span></div>
                                 <div class="activity-content">
                                     <h3>@activity.Title</h3>
                                     <p class="preserve-lines">@activity.Instructions</p>

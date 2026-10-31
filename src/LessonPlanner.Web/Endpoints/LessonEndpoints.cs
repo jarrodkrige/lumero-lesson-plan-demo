@@ -65,7 +65,7 @@ public static class LessonEndpoints
     }
 
     private static async Task<IResult> Publish(string id, HttpContext context, PresenterAccess presenter,
-        IQuizStore store, IQuizPublisherAgent publisher, ModelWorkGate gate)
+        IQuizStore store, IQuizPublisherAgent publisher, ModelWorkGate gate, ILoggerFactory loggers)
     {
         if (!DomainRules.IsId(id)) return Results.NotFound();
         var caller = presenter.RequireCaller();
@@ -83,9 +83,20 @@ public static class LessonEndpoints
                 return Redirect($"/presenter/drafts/{id}");
             var approval = await store.ApproveAsync(id, caller.Presenter, caller.ClientId, context.RequestAborted);
             using var timeout = Timeout(context, 120);
-            var receipt = await publisher.PublishAsync(new(approval.Id, id, approval.Version, approval.PayloadHash), caller, timeout.Token);
-            if (receipt.Id != id || await store.FindPublishedAsync(id, context.RequestAborted) is null)
-                throw new DomainException("publication_missing", "No completed publication is available.");
+            try
+            {
+                var receipt = await publisher.PublishAsync(new(approval.Id, id, approval.Version, approval.PayloadHash), caller, timeout.Token);
+                if (receipt.Id != id || await store.FindPublishedAsync(id, timeout.Token) is null)
+                    throw new DomainException("publication_missing", "No completed publication is available.");
+            }
+            catch (Exception error) when (!context.RequestAborted.IsCancellationRequested)
+            {
+                // The tool may commit before a model or transport loses its final response.
+                using var confirmation = Timeout(context, 10);
+                if (await store.FindPublishedAsync(id, confirmation.Token) is null) throw;
+                loggers.CreateLogger(typeof(LessonEndpoints)).LogWarning(
+                    "Publication confirmed in durable storage after {ExceptionType}; no action was repeated.", error.GetType().Name);
+            }
             return Redirect($"/presenter/drafts/{id}");
         }
         catch (DomainException) { return Redirect($"/presenter/drafts/{id}?error=approval"); }

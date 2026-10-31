@@ -13,7 +13,7 @@ The test data labels lessons and quizzes as local verification. Test signing key
 - .NET SDK selected by `global.json`.
 - Node.js supported by the pinned Azurite package.
 - Free loopback ports `11002` for Table storage and, by default, `5180` for the browser harness. The test MCP host selects an available loopback port.
-- Python Playwright and its Chromium browser for browser checks. The installed verification environment has Python Playwright 1.58.0 and Chromium 145.0.7632.6. This is separate from the centrally pinned .NET Playwright package.
+- Python with `venv` support. Browser verification uses a repository-local environment with exact packages in `tests\browser\requirements.txt`. The verified environment used Python 3.14.7, Python Playwright 1.58.0 and Chromium 145.0.7632.6. This is separate from the centrally pinned .NET Playwright package and does not modify a shared Python installation.
 
 Docker is not required for this harness. The verification machine has a Docker CLI without an available daemon, so the Node Table emulator is used.
 
@@ -44,6 +44,9 @@ dotnet test tests\LessonPlanner.UnitTests --no-build `
 
 dotnet test tests\LessonPlanner.IntegrationTests --no-build `
   --logger "trx;LogFileName=integration.trx" --results-directory .local\test-results
+
+dotnet test tests\LessonPlanner.FoundryHostProbe.Tests --no-build `
+  --logger "trx;LogFileName=foundry-probe.trx" --results-directory .local\test-results
 ```
 
 The integration tests need the local Table emulator. They fail when it is unavailable rather than silently substituting memory state. Focused filters are useful during development:
@@ -53,7 +56,9 @@ dotnet test tests\LessonPlanner.IntegrationTests --no-build `
   --filter "FullyQualifiedName~McpTransportTests|FullyQualifiedName~WebSecurityTests"
 ```
 
-Coverage includes immutable drafts, provenance, conditional transactions, approval identity and expiry, concurrent publication, anonymous attempt budgets, retry conflicts, actual MCP token validation, protected participant tickets, key-provider restart and bounded payloads. A transport fault test drops a response after publication commits, then verifies that an official-client retry returns the one durable outcome.
+Coverage includes immutable drafts, provenance, conditional transactions, approval identity and expiry, concurrent publication, anonymous attempt budgets, retry conflicts, actual MCP token validation, protected participant tickets, key-provider restart and bounded payloads. A transport fault test drops a response after publication commits, then verifies that an official-client retry returns the one durable outcome. Native endpoint tests also reconcile an already committed publication when the publisher's final response fails or supplies an incorrect receipt, without repeating the action. Request cancellation remains honoured. Reachability failures preserve the publication link and withhold the QR.
+
+Nested presenter and participant pages are checked against the real static asset host. Their stylesheet URLs are root-relative, so the strict `base-uri 'none'` policy remains in place without a blocked `<base>` element. The isolated probe tests use no real credentials or network calls.
 
 Fresh storage clients and Web/key-provider instances test persistence across application replacement. Those tests must not be described as an Azurite process restart or an Azure disaster-recovery test.
 
@@ -67,11 +72,25 @@ dotnet run --project tests\LessonPlanner.LocalHarness --no-build -- --port 5180
 
 Open `http://127.0.0.1:5180/_local`. That landing page explains the synthetic identity/model boundary and links to the local presenter sign-in. The production `/auth/sign-in` route still belongs to the real authentication configuration.
 
-Run one complete classroom sequence: request a lesson, read sources and review, download the document, generate and inspect exactly five questions, acknowledge the immutable draft, publish it, open the canonical quiz as an anonymous participant and submit five answers. Publication invokes real local MCP and commits real local Table state. Correct options must be absent from the participant's pre-submission HTML and response models.
+Prepare the isolated browser dependencies, then run the automated sequence in another terminal:
 
-Capture desktop and narrow-screen pages, form validation, keyboard focus, document/QR files and test output. Keep screenshots and transcripts in ignored `.local` state or an external evidence directory. Label every local capture as synthetic verification. Do not imply that a loopback QR address can be used by pupils on other devices.
+```powershell
+python -m venv .local\browser-venv
+.local\browser-venv\Scripts\python.exe -m pip install -r tests\browser\requirements.txt
+.local\browser-venv\Scripts\python.exe -m playwright install chromium
+.local\browser-venv\Scripts\python.exe tests\browser\verify_classroom.py `
+  --url http://127.0.0.1:5180 --output .local\browser-evidence
+```
 
-The harness uses a real-time clock for interactive work. Automated tests use a controllable clock to exercise expiry without waiting. New harness runs allocate fresh test tables.
+The script accepts only an explicit loopback origin, requires the exact local-verification notice and blocks unexpected external browser requests. It uses native headless Playwright. It does not save cookies, raw HTML, form tokens or protected tickets. Failure diagnostics omit query strings and replace unpredictable identifiers. It always closes its browser.
+
+The sequence checks lesson generation, sources/review, an actual DOCX download, exactly five private questions, anonymous 404 before publication, unchecked required approval, real MCP publication, stable canonical URL and local QR decoding. It then uses an anonymous JavaScript-disabled mobile context to check required answers, the absence of private marking data and identity fields before submission, server grading, explanations after submission and durable result refresh. Keyboard skip navigation, labels, layout bounds, safe generated-text rendering and browser resource failures are also checked.
+
+A successful run reports **40 checks**, creates **nine screenshots**, saves the DOCX and PNG QR, and writes `browser-verification.json`. The report records the source commit, tracked-change state, actual package/browser versions, check outcomes and SHA-256 hashes of the captured assets. Asset timestamps and unpredictable IDs change between runs; verify the recorded hashes rather than expecting byte-identical screenshots.
+
+Keep captures and test output in ignored `.local` state or an external evidence directory. Every capture is synthetic verification. A loopback QR cannot be used by pupils on another device. These automated checks do not constitute a comprehensive accessibility audit or live model evaluation.
+
+Start a fresh harness before each full browser attempt. The production model-action limiter is retained and permits six actions per ten minutes; a complete run uses four. Repeating it immediately against the same process can correctly receive HTTP 429. The harness uses a real-time clock for interactive work. Automated integration tests use a controllable clock for expiry. New harness runs allocate fresh test tables.
 
 ## Shutdown and cleanup
 

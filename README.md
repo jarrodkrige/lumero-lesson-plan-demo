@@ -2,7 +2,7 @@
 
 A .NET 10 reference application for a secondary computing teacher workshop. A presenter requests a lesson, examines its curriculum sources and review, downloads an editable Word document, then approves publication of a five-question quiz. Participants answer anonymously through server-rendered pages.
 
-**Verification status:** application verification is in progress. Local tests exercise actual Azure Table persistence and authenticated official MCP transport with explicitly synthetic model and identity services. No live Entra sign-in, Foundry inference, service-managed agent registration or Azure deployment has been verified. There is no production model fallback or authentication bypass.
+**Verification status:** the local synthetic checkpoint passes 361 application unit tests, 91 integration tests, 29 isolated hosting-probe tests and 40 browser checks. The complete solution builds without warnings. Local tests use actual Table persistence and authenticated official MCP transport with explicitly synthetic model and identity services. Live Entra sign-in, Foundry inference, service-managed registration, Azure deployment and external-device access remain unverified and require separate authorisation. There is no production model fallback or authentication bypass.
 
 ## Application boundary
 
@@ -53,7 +53,7 @@ The production boundary requires an existing approved Foundry model endpoint, se
 
 Both containers use port `8080`. MCP is available at `/mcp`; health endpoints are `/health/live` and `/health/ready`. Production Table creation and identity assignments are infrastructure prerequisites, not application startup side effects. Deployment and infrastructure assets are maintained separately from this implementation work.
 
-The current inference path is **application-hosted**. `AsAIAgent` does not register a service-managed Foundry agent. The hosted capability probe remains subject to explicit Azure approval.
+The implemented inference path is **application-hosted** and has not been invoked against a live model. `AsAIAgent` does not register a service-managed Foundry agent. The [isolated hosting probe](probes/LessonPlanner.FoundryHostProbe/README.md) compiles the pinned builder-level Foundry Responses v2.0 API. Its default `--check` execution makes no network call. Actual hosting, model invocation and service compatibility remain subject to explicit Azure approval.
 
 ## Workshop code
 
@@ -67,6 +67,7 @@ The current inference path is **application-hosted**. `AsAIAgent` does not regis
 - `src\LessonPlanner.Web`: presenter and participant HTTP application.
 - `src\LessonPlanner.Mcp`: independently authenticated publication service.
 - `src\LessonPlanner.AppHost` and `ServiceDefaults`: Aspire composition and service conventions.
-- `tests`: focused unit, real local integration and isolated browser-harness code.
+- `probes\LessonPlanner.FoundryHostProbe`: compile-only by default, separately gated hosting experiment.
+- `tests`: focused unit, real local integration, isolated probe tests and reproducible browser-harness code.
 
 Do not submit secrets, participant personal information, private curriculum reference decks or machine-specific cloud identifiers to this public repository.

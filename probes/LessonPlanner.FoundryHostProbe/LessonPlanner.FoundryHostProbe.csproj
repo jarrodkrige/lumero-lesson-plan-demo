@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="LessonPlanner.FoundryHostProbe.Tests" />
+    <PackageReference Include="Microsoft.Agents.AI.Foundry.Hosting" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+</Project>

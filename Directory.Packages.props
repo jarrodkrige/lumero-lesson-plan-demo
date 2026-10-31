@@ -6,6 +6,7 @@
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.27.0" />
     <PackageVersion Include="Microsoft.Agents.AI.Workflows" Version="1.27.0" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.27.0" />
+    <PackageVersion Include="Microsoft.Agents.AI.Foundry.Hosting" Version="1.27.0-preview.261030.1" />
     <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.3.0" />
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.6.4" />

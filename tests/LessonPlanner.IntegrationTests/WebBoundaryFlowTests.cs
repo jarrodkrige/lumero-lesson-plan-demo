@@ -1,5 +1,6 @@
 using System.Net;
 using LessonPlanner.Core;
+using LessonPlanner.Web.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -9,6 +10,31 @@ namespace LessonPlanner.IntegrationTests;
 public sealed class WebBoundaryFlowTests(LocalTableFixture storage)
 {
     private const string SensitiveMarker = "synthetic-sensitive-test-marker";
+
+    [Fact]
+    public async Task Deep_routes_load_rooted_stylesheets_without_a_blocked_base_element()
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        var draft = await PublishFixtureAsync();
+        using var client = host.Client();
+        await host.SignInAsync(client);
+        foreach (var path in new[] { $"/presenter/drafts/{draft.Id}", $"/quiz/{draft.Id}" })
+        {
+            using var page = await client.GetAsync(path);
+            Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+            Assert.Contains("base-uri 'none'", page.Headers.GetValues("Content-Security-Policy").Single(), StringComparison.Ordinal);
+            var html = await page.Content.ReadAsStringAsync();
+            Assert.DoesNotContain("<base ", html, StringComparison.OrdinalIgnoreCase);
+            var stylesheets = System.Text.RegularExpressions.Regex.Matches(html, "href=\"(?<path>/[^\"]+\\.css)\"");
+            Assert.Equal(2, stylesheets.Count);
+            foreach (System.Text.RegularExpressions.Match stylesheet in stylesheets)
+            {
+                using var asset = await client.GetAsync(stylesheet.Groups["path"].Value);
+                Assert.Equal(HttpStatusCode.OK, asset.StatusCode);
+                Assert.Equal("text/css", asset.Content.Headers.ContentType?.MediaType);
+            }
+        }
+    }
 
     [Fact]
     public async Task Duplicate_answer_values_do_not_create_a_result()
@@ -157,6 +183,66 @@ public sealed class WebBoundaryFlowTests(LocalTableFixture storage)
         Assert.DoesNotContain("CorrectOptionId", await unpublished.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("io")]
+    [InlineData("timeout")]
+    [InlineData("model")]
+    [InlineData("receipt")]
+    public async Task A_committed_publication_survives_a_missing_or_invalid_final_agent_response(string failure)
+    {
+        await using var host = await WebTestHost.StartAsync(storage, configureTestServices: services =>
+        {
+            services.RemoveAll<IQuizPublisherAgent>();
+            services.AddSingleton(provider => new FailureAfterCommitPublisher(
+                provider.GetRequiredService<IMcpPublicationClient>(), failure));
+            services.AddSingleton<IQuizPublisherAgent>(provider => provider.GetRequiredService<FailureAfterCommitPublisher>());
+        });
+        var draft = await storage.SaveDraftAsync();
+        using var presenter = host.Client();
+        await host.SignInAsync(presenter);
+        var path = $"/presenter/drafts/{draft.Id}";
+        var form = HtmlForms.Fields(await presenter.GetStringAsync(path), $"{path}/publish");
+        form["acknowledged"] = "yes";
+        using var response = await presenter.PostAsync($"{path}/publish", new FormUrlEncodedContent(form));
+        var committed = await storage.Store().FindPublishedAsync(draft.Id, CancellationToken.None);
+        Assert.NotNull(committed);
+        Assert.Equal(HttpStatusCode.SeeOther, response.StatusCode);
+        Assert.Equal(path, response.Headers.Location?.OriginalString);
+        Assert.DoesNotContain(SensitiveMarker, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        using var retry = await presenter.PostAsync($"{path}/publish", new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.SeeOther, retry.StatusCode);
+        Assert.Equal(path, retry.Headers.Location?.OriginalString);
+        Assert.Equal(1, host.Services.GetRequiredService<FailureAfterCommitPublisher>().Calls);
+        Assert.Equivalent(committed, await storage.Store().FindPublishedAsync(draft.Id, CancellationToken.None), strict: true);
+        using var participant = host.Client();
+        using var published = await participant.GetAsync($"/quiz/{draft.Id}");
+        Assert.Equal(HttpStatusCode.OK, published.StatusCode);
+        Assert.DoesNotContain("CorrectOptionId", await published.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task A_committed_publication_keeps_its_link_when_the_canonical_url_cannot_be_verified()
+    {
+        using var unavailable = new HttpClient(new UnavailableHandler());
+        await using var host = await WebTestHost.StartAsync(storage, configureTestServices: services =>
+        {
+            services.RemoveAll<QuizLinkVerifier>();
+            services.AddSingleton(provider => new QuizLinkVerifier(
+                provider.GetRequiredService<LessonPlanner.Infrastructure.QuizPolicy>(), unavailable));
+        });
+        var draft = await PublishFixtureAsync();
+        using var presenter = host.Client();
+        await host.SignInAsync(presenter);
+        var html = await presenter.GetStringAsync($"/presenter/drafts/{draft.Id}");
+        Assert.Contains("Publication confirmed", html, StringComparison.Ordinal);
+        Assert.Contains(storage.Policy.PublicUrl(draft.Id).AbsoluteUri, html, StringComparison.Ordinal);
+        Assert.DoesNotContain($"src=\"/presenter/drafts/{draft.Id}/qr\"", html, StringComparison.Ordinal);
+        using var qr = await presenter.GetAsync($"/presenter/drafts/{draft.Id}/qr");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, qr.StatusCode);
+        Assert.Contains("not currently reachable", await qr.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.NotNull(await storage.Store().FindPublishedAsync(draft.Id, CancellationToken.None));
+    }
+
     private async Task<QuizDraft> PublishFixtureAsync()
     {
         var store = storage.Store();
@@ -190,6 +276,36 @@ public sealed class WebBoundaryFlowTests(LocalTableFixture storage)
             Task.FromException<LessonRecord>(new InvalidOperationException(SensitiveMarker));
         public Task<QuizDraft> DraftQuizAsync(string lessonId, PresenterIdentity presenter,
             IProgress<ActivityEvent>? progress, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class FailureAfterCommitPublisher(IMcpPublicationClient transport, string failure) : IQuizPublisherAgent
+    {
+        private int calls;
+        public int Calls => Volatile.Read(ref calls);
+
+        public Task<QuizContent> DraftAsync(LessonPlan lesson, QuizContent? previous,
+            ReviewResult? feedback, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public async Task<PublishedQuiz> PublishAsync(ApprovedPublication approval, PublicationCaller caller,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            var receipt = await transport.PublishAsync(approval, caller, cancellationToken);
+            return failure switch
+            {
+                "io" => throw new IOException(SensitiveMarker),
+                "timeout" => throw new OperationCanceledException(SensitiveMarker),
+                "model" => throw new DomainException("missing_model_confirmation", SensitiveMarker),
+                "receipt" => receipt with { Id = DomainRules.NewId() },
+                _ => throw new InvalidOperationException("Unknown test failure mode.")
+            };
+        }
+    }
+
+    private sealed class UnavailableHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
     }
 
     private sealed class FailingPublisher : IQuizPublisherAgent

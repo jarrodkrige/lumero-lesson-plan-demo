@@ -16,7 +16,7 @@ else
     <div class="quiz-page">
         <header class="page-heading result-heading">
             <h1>Your quiz results</h1>
-            <p class="result-score"><strong>@_result.Score</strong><span>out of @_result.Total</span></p>
+            <p class="result-score"><strong>@_result.Score</strong>@(" ")<span>out of @_result.Total</span></p>
             <p class="lede preserve-lines">@_result.Feedback</p>
             <p class="field-hint">Submitted <time datetime="@DisplayText.Timestamp(_result.SubmittedAt)">@DisplayText.Date(_result.SubmittedAt)</time></p>
         </header>
@@ -28,7 +28,7 @@ else
                     var question = _result.Questions[index];
                     <li>
                         <section aria-labelledby="@($"result-question-{index}")">
-                            <div class="result-question-heading"><h2 id="@($"result-question-{index}")">Question @(index + 1)</h2><span class="status-label @(question.IsCorrect ? "status-success" : "status-warning")">@(question.IsCorrect ? "Correct" : "Incorrect")</span></div>
+                            <div class="result-question-heading"><h2 id="@($"result-question-{index}")">Question @(index + 1)</h2>@(" ")<span class="status-label @(question.IsCorrect ? "status-success" : "status-warning")">@(question.IsCorrect ? "Correct" : "Incorrect")</span></div>
                             <p class="question-prompt">@question.Prompt</p>
                             <dl class="marked-answers">
                                 <div><dt>Your answer</dt><dd>@question.SelectedOptionId</dd></div>
