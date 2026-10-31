@@ -8,6 +8,14 @@ This establishes local application behaviour. It does not prove live Entra feder
 
 The test data labels lessons and quizzes as local verification. Test signing keys and principal identifiers are synthetic. Do not replace them with an actual user's tokens or personal information.
 
+## Recorded checkpoint
+
+The [checkpoint manifest](checkpoint-manifest.json) records the exact clean code revision, audited locked build, 361 application unit tests, 91 integration tests, 29 isolated probe tests, 40 browser checks, four safe probe CLI cases and eleven offline teaching-example cases. The 28 grading-policy example tests are included in the application unit total.
+
+Its evidence entries identify nineteen retained files by relative name, byte length and SHA-256: nine screenshots, a downloaded DOCX, a locally encoded QR, the browser report and seven build/test records. Raw runner output can contain machine paths, so the bundle is retained separately with the implementation session. No cookies, protected tickets or raw HTML were captured by the browser script. The manifest identifies the tested code commit rather than inventing a self-referential documentation commit.
+
+Use the commands below against that code revision to reproduce the checks. New runtime identifiers and timestamps produce different capture hashes. The recorded QR belongs to a stopped loopback harness and is not the workshop's public quiz URL. The owned harness and emulator were stopped after verification.
+
 ## Prerequisites
 
 - .NET SDK selected by `global.json`.

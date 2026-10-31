@@ -2,7 +2,7 @@
 
 ## Scope of the first checkpoint
 
-This checkpoint establishes a pinned .NET 10 solution and typed application boundaries. It does not establish a working lesson generator, deployment, sign-in or model access. Application and cloud verification are separately recorded.
+The first checkpoint established a pinned .NET 10 solution and typed application boundaries. That checkpoint alone did not establish a working lesson generator, deployment, sign-in or model access. The later [local application checkpoint](checkpoint-manifest.json) records synthetic acceptance results and the remaining live-cloud checks.
 
 - SDK: 10.0.403, strict SDK selection in `global.json`.
 - Microsoft Agent Framework core, OpenAI adapter and workflows: 1.27.0.

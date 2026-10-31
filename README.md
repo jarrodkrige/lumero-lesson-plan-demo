@@ -53,6 +53,8 @@ The production boundary requires an existing approved Foundry model endpoint, se
 
 Both containers use port `8080`. MCP is available at `/mcp`; health endpoints are `/health/live` and `/health/ready`. Production Table creation and identity assignments are infrastructure prerequisites, not application startup side effects. Deployment and infrastructure assets are maintained separately from this implementation work.
 
+The [reproducible checkpoint manifest](docs/checkpoint-manifest.json) records the verified code revision, dependency locks, exact commands, measured results and SHA-256 hashes for the retained workshop evidence. Synthetic runtime captures and raw test output are kept outside the public repository.
+
 The implemented inference path is **application-hosted** and has not been invoked against a live model. `AsAIAgent` does not register a service-managed Foundry agent. The [isolated hosting probe](probes/LessonPlanner.FoundryHostProbe/README.md) compiles the pinned builder-level Foundry Responses v2.0 API. Its default `--check` execution makes no network call. Actual hosting, model invocation and service compatibility remain subject to explicit Azure approval.
 
 ## Workshop code

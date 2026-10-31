@@ -1,0 +1,794 @@
+{
+  "manifest_version": 1,
+  "repository": "jarrodkrige/lumero-lesson-plan-demo",
+  "status": "local-synthetic-acceptance-verified; live-acceptance-pending",
+  "whole_application_accepted": false,
+  "recorded_utc": "2026-10-31T23:12:20.511707+00:00",
+  "source": {
+    "verified_code_commit": "ea5e365f7ce02b6132b5f7b56fa461bdbec5d832",
+    "verified_tree": "d93bf42174d05234d97e5b18fa0556624a3f9016",
+    "tracked_changes_present_during_build_tests_and_browser_run": false,
+    "manifest_commit_policy": "This manifest is a documentation-only follow-up to the verified code commit. Its containing commit is intentionally not self-referenced.",
+    "source_hash_policy": "Source SHA-256 values cover Git blob bytes, independent of checkout line-ending conversion. Evidence hashes cover the retained file bytes."
+  },
+  "checkpoints": [
+    {
+      "name": "Pinned stack and shared contracts",
+      "commit": "550e5b9b155be0447c070727e2645424fad57abe"
+    },
+    {
+      "name": "Guarded application and durable MCP publication",
+      "commit": "c260278f810286fc7e7c8d07e440035fe30dcc34"
+    },
+    {
+      "name": "Publication recovery, browser acceptance and isolated hosting probe",
+      "commit": "ea5e365f7ce02b6132b5f7b56fa461bdbec5d832"
+    }
+  ],
+  "workshop": {
+    "date": "2026-11-02",
+    "duration_minutes": 90,
+    "audience": "Six secondary computer science teachers",
+    "examples": [
+      "OCR J277 sorting",
+      "Robot sports day"
+    ],
+    "action": "Presenter-approved MCP quiz publication; no email"
+  },
+  "contract": {
+    "schema": "lumero.v1",
+    "files": [
+      {
+        "path": "src\\LessonPlanner.Core\\Contracts.cs",
+        "git_blob": "ff74e2db2dc123e841f63f6a2a01564ec65690de",
+        "sha256_of_git_blob_bytes": "cc75494e0f67ab9799a3d8f0eca6098c3ea8fd954a5b85786008d7473425d843",
+        "bytes": 4725
+      },
+      {
+        "path": "src\\LessonPlanner.Core\\Boundaries.cs",
+        "git_blob": "62615dfde85e5dba9ca65cd0c13b85d4be2ffba4",
+        "sha256_of_git_blob_bytes": "b433963efa3ab00e1e5f598f51b27b5194bf678f9ee653fbc5c32e74c06eeca1",
+        "bytes": 3300
+      },
+      {
+        "path": "src\\LessonPlanner.Core\\DomainRules.cs",
+        "git_blob": "bb0fabce795e3b36f8a4e67e35892ed36d0cdf13",
+        "sha256_of_git_blob_bytes": "c91a3981013c69d8557660b94b5f6de87cf2154732cfd119025057c431265c3f",
+        "bytes": 10920
+      },
+      {
+        "path": "docs\\stack-contract.md",
+        "git_blob": "53fe1a6ed666b1e1d016ec4e65a6de409cb8df49",
+        "sha256_of_git_blob_bytes": "77b74a5ba2fc122f22ffaba96f84c89fcc53c82818e3eb1de9f0ceda165de9e3",
+        "bytes": 7351
+      }
+    ],
+    "web_and_mcp_container_port": 8080,
+    "mcp_path": "/mcp",
+    "liveness_path": "/health/live",
+    "readiness_path": "/health/ready",
+    "configuration_names_unchanged_from_application_checkpoint": true
+  },
+  "stack": {
+    "dotnet_sdk": "10.0.403",
+    "target_framework": "net10.0",
+    "runtimes": {
+      "Microsoft.AspNetCore.App": "10.0.14",
+      "Microsoft.NETCore.App": "10.0.14"
+    },
+    "central_package_versions": {
+      "Microsoft.Agents.AI": "1.27.0",
+      "Microsoft.Agents.AI.Workflows": "1.27.0",
+      "Microsoft.Agents.AI.OpenAI": "1.27.0",
+      "Microsoft.Agents.AI.Foundry.Hosting": "1.27.0-preview.261030.1",
+      "ModelContextProtocol": "2.3.0",
+      "ModelContextProtocol.AspNetCore": "2.3.0",
+      "Aspire.Hosting.AppHost": "13.6.4",
+      "Azure.Data.Tables": "12.13.0",
+      "Azure.Identity": "1.21.0",
+      "Azure.Extensions.AspNetCore.DataProtection.Blobs": "1.5.5",
+      "Microsoft.Identity.Web": "4.16.1",
+      "System.Security.Cryptography.Pkcs": "10.0.14",
+      "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.14",
+      "Microsoft.AspNetCore.Mvc.Testing": "10.0.14",
+      "DocumentFormat.OpenXml": "3.5.1",
+      "PdfPig": "0.1.16",
+      "QRCoder": "1.8.1",
+      "Microsoft.Extensions.ServiceDiscovery": "10.11.0",
+      "OpenTelemetry.Extensions.Hosting": "1.20.1",
+      "OpenTelemetry.Instrumentation.AspNetCore": "1.20.1",
+      "OpenTelemetry.Exporter.OpenTelemetryProtocol": "1.20.1",
+      "Microsoft.NET.Test.Sdk": "18.11.0",
+      "xunit": "2.9.3",
+      "xunit.runner.visualstudio": "4.0.1",
+      "Microsoft.Playwright": "1.64.1"
+    },
+    "central_package_note": "Declared package versions are recorded for reproducibility. Microsoft.Playwright is centrally declared; the executed browser suite uses Python Playwright instead.",
+    "isolated_hosting_probe_resolved_versions": {
+      "Microsoft.Agents.AI.Foundry.Hosting": "1.27.0-preview.261030.1",
+      "Microsoft.Agents.AI.Foundry": "1.27.0-preview.261030.1",
+      "Azure.AI.Projects": "3.0.0-beta.5",
+      "Azure.AI.Extensions.OpenAI": "3.0.0-beta.5",
+      "Azure.AI.AgentServer.Core": "1.0.0-beta.30",
+      "Azure.AI.AgentServer.Responses": "1.0.0-beta.9",
+      "Azure.Core": "1.63.0",
+      "System.ClientModel": "1.16.0"
+    },
+    "hosted_container_protocol": "Foundry Responses v2.0, compiled only",
+    "invocations_package_in_probe_graph": false,
+    "node": "v26.13.0",
+    "azurite": "3.36.0",
+    "python": "3.14.7",
+    "chromium": "145.0.7632.6",
+    "browser_packages": {
+      "playwright": "1.58.0",
+      "opencv-python-headless": "4.13.0.92",
+      "numpy": "2.5.4",
+      "greenlet": "3.5.6",
+      "pyee": "13.0.1",
+      "typing_extensions": "4.16.0"
+    },
+    "locked_dependency_files": [
+      {
+        "path": "examples\\GradingPolicyWorkshop\\packages.lock.json",
+        "git_blob": "f3e7fe3af450bcec9f4e754b0be3e5e214603106",
+        "sha256_of_git_blob_bytes": "b82f243b94db6dd71900c296147907e421b3ed5f5bad823a417f8a7ba4763ca9",
+        "bytes": 130
+      },
+      {
+        "path": "package-lock.json",
+        "git_blob": "5e84a85f38f07cec185e750cc9f154928285b72b",
+        "sha256_of_git_blob_bytes": "c5c5c53bd978b4d52e993713c80d3d91d79a870526f1403173e8a09618d4ecba",
+        "bytes": 96540
+      },
+      {
+        "path": "probes\\LessonPlanner.FoundryHostProbe\\packages.lock.json",
+        "git_blob": "bde0695601d871fa66a382fd5c5e31cf957c85de",
+        "sha256_of_git_blob_bytes": "b60876724c3035c502015ddcb95f8362ea6932d53fb104028d4f3a19b7f98d36",
+        "bytes": 17390
+      },
+      {
+        "path": "src\\LessonPlanner.Agents\\packages.lock.json",
+        "git_blob": "b38c2cf4de72cf310a585faef7e236615aeb1bc6",
+        "sha256_of_git_blob_bytes": "d592cb554d84a6ac187c949fada34d923e36ca01b6e8e63bcac4a7fd6d44bd4a",
+        "bytes": 14411
+      },
+      {
+        "path": "src\\LessonPlanner.AppHost\\packages.lock.json",
+        "git_blob": "f5137ebf22faa6e7702eb45a9e053e6dc49b2904",
+        "sha256_of_git_blob_bytes": "f1649d11efed3f11f5955b06b24eac077ad21ec29e5f72b3d8e55f15be45dc4a",
+        "bytes": 30814
+      },
+      {
+        "path": "src\\LessonPlanner.Core\\packages.lock.json",
+        "git_blob": "6afd6786b95a8c85febce85cf6219643ee860872",
+        "sha256_of_git_blob_bytes": "03eeadc5ef377c17f787ab65f41fb4c8a9c936bb7f7f4171111fdeec8a81cb46",
+        "bytes": 61
+      },
+      {
+        "path": "src\\LessonPlanner.Infrastructure\\packages.lock.json",
+        "git_blob": "4444bad5e157f4aac11b95461f586f0c6440b64b",
+        "sha256_of_git_blob_bytes": "a52e3cd3051c39a2fa5940fa17ca68e2ea4e57cbfb6f5405fa3d84c47fe1fdc6",
+        "bytes": 7203
+      },
+      {
+        "path": "src\\LessonPlanner.Mcp\\packages.lock.json",
+        "git_blob": "5d8e36a749111696ab3312a3852609afd7bdf9b0",
+        "sha256_of_git_blob_bytes": "a4e0f3fef5d6673798c7a783cc73e037e785d1f67e999dcc7df074d727b90dec",
+        "bytes": 13729
+      },
+      {
+        "path": "src\\LessonPlanner.ServiceDefaults\\packages.lock.json",
+        "git_blob": "ae68f5e5cc9a5496fb6ce6669328346c10effc02",
+        "sha256_of_git_blob_bytes": "1f8d716fe631912ca11a1acd852431870a172b45dfb6abb3c7f1b790f87ae9b6",
+        "bytes": 2577
+      },
+      {
+        "path": "src\\LessonPlanner.Web\\packages.lock.json",
+        "git_blob": "e0610bba27a8ac25dce2ffe00c3f7b6f2638f705",
+        "sha256_of_git_blob_bytes": "993e58b68d86caccac32269a4b8b767de6f9fcabe4e83e13e62fd1919e638c2e",
+        "bytes": 24871
+      },
+      {
+        "path": "tests\\LessonPlanner.FoundryHostProbe.Tests\\packages.lock.json",
+        "git_blob": "db8db1fc75cc0e56dbe17393b0e3ea82bdb7c24c",
+        "sha256_of_git_blob_bytes": "ee785127d3ebc8a7dc09655e6ed994fd12dd50ae1a661a93cfb767cca798950f",
+        "bytes": 30231
+      },
+      {
+        "path": "tests\\LessonPlanner.IntegrationTests\\packages.lock.json",
+        "git_blob": "5e07a39bd61f10701f220c8f9d312d6803d619e1",
+        "sha256_of_git_blob_bytes": "c47555bc27c33076ad2775ee3c0e327bbc9ac8a71b2d5fe02ed27b04910d84e5",
+        "bytes": 51103
+      },
+      {
+        "path": "tests\\LessonPlanner.LocalHarness\\packages.lock.json",
+        "git_blob": "fda190c5650c9ec1f02017f1c872d7ce8182497c",
+        "sha256_of_git_blob_bytes": "5b2c116e3b1689bb42541572d2582586264480cd4e428bad952d0459ba47e55e",
+        "bytes": 51291
+      },
+      {
+        "path": "tests\\LessonPlanner.UnitTests\\packages.lock.json",
+        "git_blob": "c721189419476bc0396317bf1dadfb6f7b04f31a",
+        "sha256_of_git_blob_bytes": "1c490c073b989bec2247b0c3b11f1f76a59306b525e21d1e4a7a833cb49f0bf9",
+        "bytes": 24263
+      }
+    ],
+    "browser_requirements": {
+      "path": "tests\\browser\\requirements.txt",
+      "git_blob": "7bfbbf0b6ecdf77b2a52cbf5ee1eddf1fa632568",
+      "sha256_of_git_blob_bytes": "657fb6f82b8f11763a47678f35b910fff1c65a15d48ee526a75833b118721751",
+      "bytes": 121
+    }
+  },
+  "build": {
+    "command": "dotnet build LessonPlanner.slnx --no-restore --verbosity minimal",
+    "exit_code": 0,
+    "warnings": 0,
+    "errors": 0,
+    "project_count": 13,
+    "source_commit": "ea5e365f7ce02b6132b5f7b56fa461bdbec5d832",
+    "restore_command_executed": "dotnet restore LessonPlanner.slnx --locked-mode --source https://packagefeedproxy.microsoft.io/nuget/v3/index.json --verbosity minimal",
+    "locked_restore_passed": true,
+    "nuget_audit_enabled": true,
+    "restore_note": "An available Microsoft package-feed mirror was used after direct NuGet TLS failed. No machine-specific feed configuration or audit bypass is committed.",
+    "raw_evidence": "verification\\clean-build.log",
+    "metadata_evidence": "verification\\clean-build-verification.json"
+  },
+  "dotnet_tests": {
+    "total_passed": 481,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "suite": "unit",
+        "status": "passed",
+        "command": "dotnet test tests\\LessonPlanner.UnitTests --no-build --logger \"trx;LogFileName=unit.trx\" --results-directory .local\\test-results --verbosity minimal",
+        "counts": {
+          "total": 361,
+          "executed": 361,
+          "passed": 361,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "raw_evidence": "verification\\unit.trx"
+      },
+      {
+        "suite": "integration",
+        "status": "passed",
+        "command": "dotnet test tests\\LessonPlanner.IntegrationTests --no-build --logger \"trx;LogFileName=integration.trx\" --results-directory .local\\test-results --verbosity minimal",
+        "counts": {
+          "total": 91,
+          "executed": 91,
+          "passed": 91,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "raw_evidence": "verification\\integration.trx"
+      },
+      {
+        "suite": "foundry-probe",
+        "status": "passed",
+        "command": "dotnet test tests\\LessonPlanner.FoundryHostProbe.Tests --no-build --logger \"trx;LogFileName=foundry-probe.trx\" --results-directory .local\\test-results --verbosity minimal",
+        "counts": {
+          "total": 29,
+          "executed": 29,
+          "passed": 29,
+          "failed": 0,
+          "notExecuted": 0
+        },
+        "raw_evidence": "verification\\foundry-probe.trx"
+      }
+    ],
+    "scope": "Application-owned workflow with synthetic role outputs and identities. Real loopback Kestrel, official authenticated MCP transport and actual Azurite Table persistence.",
+    "restart_scope": "Fresh storage clients and Web/key-provider instances. Not an Azurite process-restart or Azure disaster-recovery test."
+  },
+  "browser_checks": {
+    "status": "passed",
+    "passed": 40,
+    "command": "dotnet run --project tests\\LessonPlanner.LocalHarness --no-build -- --port 5180; then in another terminal: .local\\browser-venv\\Scripts\\python.exe tests\\browser\\verify_classroom.py --url http://127.0.0.1:5180 --output .local\\browser-evidence",
+    "reproduction_guide": "docs\\local-verification.md",
+    "source": {
+      "commit": "ea5e365f7ce02b6132b5f7b56fa461bdbec5d832",
+      "tracked_changes_present": false
+    },
+    "diagnostics": {
+      "page_errors": [],
+      "failed_resources": [],
+      "http_errors": [],
+      "blocked_external_requests": 0
+    },
+    "checks": [
+      {
+        "name": "Harness explicitly discloses synthetic identity and models",
+        "outcome": "passed"
+      },
+      {
+        "name": "Home has a main landmark and one heading",
+        "outcome": "passed"
+      },
+      {
+        "name": "Keyboard navigation starts with the skip link",
+        "outcome": "passed"
+      },
+      {
+        "name": "Synthetic presenter reaches the protected workspace",
+        "outcome": "passed"
+      },
+      {
+        "name": "Robot sports day example prefills the form",
+        "outcome": "passed"
+      },
+      {
+        "name": "Sorting example prefills the form",
+        "outcome": "passed"
+      },
+      {
+        "name": "All lesson inputs have explicit accessible labels",
+        "outcome": "passed"
+      },
+      {
+        "name": "Classroom stylesheet is applied",
+        "outcome": "passed"
+      },
+      {
+        "name": "Presenter form fits a mobile viewport",
+        "outcome": "passed"
+      },
+      {
+        "name": "Generated lesson is explicitly local verification",
+        "outcome": "passed"
+      },
+      {
+        "name": "Lesson duration has accessible word separation",
+        "outcome": "passed"
+      },
+      {
+        "name": "Lesson exposes citation provenance",
+        "outcome": "passed"
+      },
+      {
+        "name": "Download is a real Open XML lesson document",
+        "outcome": "passed"
+      },
+      {
+        "name": "Private draft has exactly five reviewed questions",
+        "outcome": "passed"
+      },
+      {
+        "name": "Private draft keeps explanations for presenter review",
+        "outcome": "passed"
+      },
+      {
+        "name": "Anonymous quiz is unavailable before publication",
+        "outcome": "passed"
+      },
+      {
+        "name": "Presenter approval is required and initially unselected",
+        "outcome": "passed"
+      },
+      {
+        "name": "Native form blocks publication without approval",
+        "outcome": "passed"
+      },
+      {
+        "name": "Committed publication exposes the canonical quiz link",
+        "outcome": "passed"
+      },
+      {
+        "name": "Published draft no longer offers another approval",
+        "outcome": "passed"
+      },
+      {
+        "name": "Verified canonical link exposes a PNG QR",
+        "outcome": "passed"
+      },
+      {
+        "name": "Locally rendered QR decodes to the exact canonical URL",
+        "outcome": "passed"
+      },
+      {
+        "name": "Refreshing the draft preserves its published outcome",
+        "outcome": "passed"
+      },
+      {
+        "name": "Canonical public page has its exact publication marker",
+        "outcome": "passed"
+      },
+      {
+        "name": "Public response has restrictive security headers",
+        "outcome": "passed"
+      },
+      {
+        "name": "Anonymous page contains no scripts",
+        "outcome": "passed"
+      },
+      {
+        "name": "Anonymous quiz has five grouped questions and twenty options",
+        "outcome": "passed"
+      },
+      {
+        "name": "Question legends and option labels have word separation",
+        "outcome": "passed"
+      },
+      {
+        "name": "Pre-submission document contains no marking keys or explanations",
+        "outcome": "passed"
+      },
+      {
+        "name": "Anonymous form asks for no participant identity",
+        "outcome": "passed"
+      },
+      {
+        "name": "Anonymous quiz fits a mobile viewport",
+        "outcome": "passed"
+      },
+      {
+        "name": "Native participant form requires every answer",
+        "outcome": "passed"
+      },
+      {
+        "name": "Server grading produces the expected two out of five",
+        "outcome": "passed"
+      },
+      {
+        "name": "Marking explanation is available only after submission",
+        "outcome": "passed"
+      },
+      {
+        "name": "Results fit a mobile viewport",
+        "outcome": "passed"
+      },
+      {
+        "name": "Result refresh preserves the persisted attempt and score",
+        "outcome": "passed"
+      },
+      {
+        "name": "Private result link carries no participant PII or query token",
+        "outcome": "passed"
+      },
+      {
+        "name": "Generated markup is rendered as text without executable nodes",
+        "outcome": "passed"
+      },
+      {
+        "name": "Browser made no external requests",
+        "outcome": "passed"
+      },
+      {
+        "name": "Rendered flow has no page errors or failed resources",
+        "outcome": "passed"
+      }
+    ],
+    "screenshot_count": 9,
+    "real_docx_downloads": 1,
+    "locally_encoded_and_decoded_qr_images": 1,
+    "report": "browser-verification.json",
+    "limitations": [
+      "Live Entra sign-in",
+      "Foundry inference",
+      "Service-managed agent registration",
+      "Azure deployment",
+      "External phone reachability",
+      "Comprehensive accessibility audit"
+    ]
+  },
+  "safe_probe_cli": {
+    "status": "passed",
+    "passed_cases": 4,
+    "cases": [
+      {
+        "arguments": [],
+        "exit_code": 0
+      },
+      {
+        "arguments": [
+          "--check"
+        ],
+        "exit_code": 0
+      },
+      {
+        "arguments": [
+          "--serve"
+        ],
+        "exit_code": 2
+      },
+      {
+        "arguments": [
+          "--unknown"
+        ],
+        "exit_code": 2
+      }
+    ],
+    "acknowledgement_removed_from_child_environment": true,
+    "executed_serve_with_acknowledgement": false,
+    "credentials_created": false,
+    "host_started": false,
+    "inference_executed": false,
+    "service_managed_agent_registered": false,
+    "report": "verification\\foundry-probe-cli.json"
+  },
+  "original_csharp_exercise": {
+    "files": [
+      {
+        "path": "examples\\GradingPolicyWorkshop\\After\\QuizSession.cs",
+        "git_blob": "0e9ab2a5b0c2bf395d30379b5dc5eaa425528562",
+        "sha256_of_git_blob_bytes": "65046bfba07077ef0fd3e8db29d62f0078f318d29fa18f16bb00da1d36a35d4f",
+        "bytes": 495
+      },
+      {
+        "path": "examples\\GradingPolicyWorkshop\\After\\SortingFeedbackPolicy.cs",
+        "git_blob": "f149f36a3e0f75259b27da1801cc6fdb98011cde",
+        "sha256_of_git_blob_bytes": "55bc8856e1ca00aed8cce987f90d8f6bf589368e4acf2d684b69a03b7950ab21",
+        "bytes": 900
+      },
+      {
+        "path": "examples\\GradingPolicyWorkshop\\Before\\QuizSession.cs",
+        "git_blob": "95e4e2c5596fd15fc1c3448f21b4a5789b96cb1a",
+        "sha256_of_git_blob_bytes": "aa441f7e3d133e80759872c5f62758b3e3e1207ef0c22a93fe42dddec81dd86a",
+        "bytes": 661
+      },
+      {
+        "path": "examples\\GradingPolicyWorkshop\\GradingPolicyWorkshop.csproj",
+        "git_blob": "c33739aba90cc5c69826128d811df799c2d125b7",
+        "sha256_of_git_blob_bytes": "06888d9a13ce0220cad60d459ab84b833413398b0ab46ac73ab47356d0aa5b27",
+        "bytes": 457
+      },
+      {
+        "path": "examples\\GradingPolicyWorkshop\\Program.cs",
+        "git_blob": "18d051a063c39074844412f791c619b461d38a87",
+        "sha256_of_git_blob_bytes": "c79d41b2bee10f71558e09debad8e8d19422495f3aa3cb77a19ed85aff20c0f4",
+        "bytes": 1460
+      },
+      {
+        "path": "examples\\GradingPolicyWorkshop\\SortingScenario.cs",
+        "git_blob": "d3f4c2ca600646400dec7568e3de412dbf4dbb3f",
+        "sha256_of_git_blob_bytes": "b25291b942902b8cbad26e5ca87fd90c89b21366e9af0250c546ce82f8ccf3e7",
+        "bytes": 2819
+      },
+      {
+        "path": "examples\\README.md",
+        "git_blob": "b0113c0d878d49e7afbef262ca4dbee5420890a4",
+        "sha256_of_git_blob_bytes": "8c07257b6b7e740c1508435225683968d85a699e8160fa99c07d2f65a52d44e0",
+        "bytes": 12211
+      },
+      {
+        "path": "examples\\lesson-inputs\\ocr-j277-sorting.json",
+        "git_blob": "fbfe046fd939a0d968d64adf85cf8d0e2ad01685",
+        "sha256_of_git_blob_bytes": "1281291122e5d8f82a341ff2ec1c9799716c87167dd398bbb717943a7b8b69d6",
+        "bytes": 1023
+      },
+      {
+        "path": "examples\\lesson-inputs\\robot-sports-day.json",
+        "git_blob": "d25cf8fb424e34b9c155a380b7d176bd9b781418",
+        "sha256_of_git_blob_bytes": "327a99eeb5335e5b43d04d3bc5eaaf37448dce7dea536e96732b15b0eea16e07",
+        "bytes": 1079
+      },
+      {
+        "path": "src\\LessonPlanner.Core\\ExactMatchGradingPolicy.cs",
+        "git_blob": "5fbb767f74987e0d1623f6947980d4fa58fd4dc1",
+        "sha256_of_git_blob_bytes": "0dff606ca9549808aff2a9dc9866d6772e69089acc4a20aeaffc305e9c6aa177",
+        "bytes": 2047
+      },
+      {
+        "path": "tests\\LessonPlanner.UnitTests\\GradingPolicyWorkshopExampleTests.cs",
+        "git_blob": "66907a183f96e15ba29287d5519676e2f34971c9",
+        "sha256_of_git_blob_bytes": "602f4b8d73e2e9f0f1181efb1ca3b8c4f357a8392a151dd397feb81c88687cb5",
+        "bytes": 9555
+      }
+    ],
+    "focused_tests": 28,
+    "focused_tests_included_in_application_unit_total": true,
+    "focused_test_command": "dotnet test tests\\LessonPlanner.UnitTests --no-build --filter FullyQualifiedName~GradingPolicyWorkshopExampleTests",
+    "console_cases_passed": 11,
+    "console_case_arguments": [
+      [
+        "0"
+      ],
+      [
+        "1"
+      ],
+      [
+        "2"
+      ],
+      [
+        "3"
+      ],
+      [
+        "4"
+      ],
+      [
+        "5"
+      ],
+      [],
+      [
+        "-1"
+      ],
+      [
+        "6"
+      ],
+      [
+        "invalid"
+      ],
+      [
+        "3",
+        "4"
+      ]
+    ],
+    "console_evidence": "verification\\workshop-cli.json",
+    "safe_change": "Change the feedback scaffolding threshold through constructor-injected IGradingPolicy. Keep exact-match marks, answer keys, persistence and authorisation unchanged.",
+    "live_review_diff_command": "git --no-pager diff --no-index -- examples\\GradingPolicyWorkshop\\Before\\QuizSession.cs examples\\GradingPolicyWorkshop\\After\\QuizSession.cs",
+    "diff_exit_code_note": "Exit 1 is expected because the two teaching files differ."
+  },
+  "evidence": {
+    "bundle_name": "lumero-local-evidence",
+    "retention": "Retained separately with the implementation session. Runtime captures, raw test output and machine paths are not committed to the public repository.",
+    "files": [
+      {
+        "file": "00-home-desktop.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "1d9f970fe28fc53b8b5bae72e6181cb3028d1c59d099f295cf9e26a4771f457f",
+        "bytes": 88998
+      },
+      {
+        "file": "07-robot-example-desktop.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "79e6869cdc05f686ee39074b3e773051616e8254fbb6962305f711b96682bb5a",
+        "bytes": 112034
+      },
+      {
+        "file": "01-presenter-desktop.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "cd9b65c7709dfc1581a37602252d061ee27fb55507b742c70f2e03be96465746",
+        "bytes": 135970
+      },
+      {
+        "file": "08-presenter-mobile.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "f48e53e89a2dd22e358be52e697331feb3e8bc2a8544fcb087d4e352235db44f",
+        "bytes": 104065
+      },
+      {
+        "file": "02-lesson-desktop.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "32e78ba4e99bc4c4d8c47553a88e411152b30d9e7ef0d78be6fc74c87ddb9e1a",
+        "bytes": 175145
+      },
+      {
+        "file": "lesson-local-verification.docx",
+        "classification": "synthetic classroom capture",
+        "sha256": "b7ef1aa49c4870d820ed965a39eb6d74623dc133b4cd048bd04732c2aed9db6f",
+        "bytes": 3892
+      },
+      {
+        "file": "03-private-draft-desktop.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "3456de78e5443b42a2e7774ac9b7c4ed69982d2bb2deda720ccbfa7883cd20c7",
+        "bytes": 208987
+      },
+      {
+        "file": "quiz-local-verification.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "cdd2c49655e2eabeb567569f1a4c9d09c8ba9e47e854ec1be4a4ff78e4b5d918",
+        "bytes": 735
+      },
+      {
+        "file": "04-published-desktop.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "65163d04e59b6acf0930fe8d661fc505c690bb28a80be20dfed205296bfae3ba",
+        "bytes": 215518
+      },
+      {
+        "file": "05-anonymous-quiz-mobile.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "67b8374a0fcea63e5cf25da7264037fc6701add95762fadc457ce4be1e80cb66",
+        "bytes": 120118
+      },
+      {
+        "file": "06-results-mobile.png",
+        "classification": "synthetic classroom capture",
+        "sha256": "de6d7abcc0afc059bece3b2cdf96a3c608390f4758c40b68690b21db277df833",
+        "bytes": 98346
+      },
+      {
+        "file": "browser-verification.json",
+        "classification": "sanitised browser verification report",
+        "sha256": "f2f577ec6cc8c054ce53e619b6279c00191e9cecd8dffe29da2f460e3e3883a7",
+        "bytes": 7232
+      },
+      {
+        "file": "verification\\unit.trx",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "e50b3463d32bfc046ed190b0521a1eb227703f8b06ba0f88fa440c1e13eeb9e5",
+        "bytes": 569986
+      },
+      {
+        "file": "verification\\integration.trx",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "021d93a98866adc510178ba728e22b8a20ce257398da07394017999a893c4bb0",
+        "bytes": 148773
+      },
+      {
+        "file": "verification\\foundry-probe.trx",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "8085a1e9949993374604be2fe520970c7366b11ac479ca7cf260a1cf2c477c4e",
+        "bytes": 50364
+      },
+      {
+        "file": "verification\\clean-build.log",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "c385418561150383cd40530648e8175f140ba8cfb7a08ad4951bff88ad1b76bb",
+        "bytes": 2593
+      },
+      {
+        "file": "verification\\clean-build-verification.json",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "bf3bd4a4cd6fe4f91489a7d837f231dd1f8aaaab21ca25dafa8faf0a9f83acf3",
+        "bytes": 617
+      },
+      {
+        "file": "verification\\foundry-probe-cli.json",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "f5bdd9f47e61fdc4ba65e587c3e3fb4ebb5809135a19c5356e414eed894ff764",
+        "bytes": 2444
+      },
+      {
+        "file": "verification\\workshop-cli.json",
+        "classification": "local test evidence; raw runner output can contain machine paths and is not committed",
+        "sha256": "b74708b64e43565e9c1482c3df40b28bdb84522914f4736516f0b068f2490399",
+        "bytes": 3557
+      }
+    ],
+    "reproduction_note": "Run identifiers and timestamps change. Verify hashes for this retained capture; regenerated screenshots and documents need not be byte-identical.",
+    "qr_note": "The QR is a verified loopback test URL belonging to a stopped disposable harness. It is not a published workshop URL or external-device evidence."
+  },
+  "local_tool_limitations": {
+    "docker_daemon_at_initial_preflight": "unavailable",
+    "docker_used_for_this_verification": false,
+    "emulator_audit": {
+      "status": "not clean",
+      "recorded_findings": 21,
+      "moderate": 13,
+      "high": 7,
+      "critical": 1,
+      "note": "Previously recorded npm advisory results, not a fresh advisory lookup for this manifest. Review before reuse.",
+      "controls": [
+        "Loopback binding only",
+        "Telemetry disabled",
+        "Synthetic data only",
+        "Excluded from production images",
+        "Owned emulator stopped after verification"
+      ]
+    },
+    "browser_accessibility_scope": "Automated labels, keyboard navigation, fieldsets, native form requirements and viewport bounds; not a comprehensive accessibility audit."
+  },
+  "hosting_disclosure": {
+    "scope": "Operations performed by this implementation and verification session.",
+    "application_provider": "Application-hosted Agent Framework objects calling an explicitly configured Foundry model; compiled, not invoked live",
+    "as_ai_agent_registers_managed_agent": false,
+    "probe": "Isolated builder.AddFoundryResponses and MapFoundryResponses integration; compile and non-executing CLI paths verified only",
+    "azure_resources_provisioned_or_changed": false,
+    "azure_roles_or_app_registrations_changed": false,
+    "azure_deployment_executed": false,
+    "paid_model_or_hosting_usage_started": false,
+    "replacement_foundry_project_created": false
+  },
+  "pending_acceptance": [
+    "Explicit coordinator approval for the scoped Azure operations and any model or hosting consumption",
+    "Real presenter Entra sign-in, federation, allowlist and managed-identity permissions",
+    "Real MCP Entra application audience, role and caller across deployed services",
+    "Live Foundry structured output, grounding, curriculum accuracy, bounded review and publisher tool behaviour on an approved deployment",
+    "Selected hosted C# Responses v2.0 service/protocol compatibility if that hosting path is chosen",
+    "Deployment using the existing approved Foundry project, private persistence and stable configuration contract",
+    "Externally reachable canonical quiz URL, QR scan and anonymous participation on a separate device",
+    "Deployment-level restart durability and failure recovery",
+    "Teacher review of generated lessons and fuller accessibility evaluation"
+  ],
+  "cleanup": {
+    "browser_harness_gracefully_stopped": true,
+    "harness_shutdown_evidence": "Protected stop endpoint returned HTTP 204; harness exited with code 0.",
+    "harness_cleanup_scope": "Only its synthetic test table and test key directory.",
+    "owned_table_emulator_stopped": true,
+    "source_and_evidence_retained": true
+  }
+}
