@@ -35,12 +35,12 @@ public static class LessonEndpoints
         if (permit is null) return Redirect("/presenter?error=busy");
         try
         {
-            var form = await context.Request.ReadFormAsync(context.RequestAborted);
+            using var timeout = Timeout(context, 210);
+            var form = await context.Request.ReadFormAsync(timeout.Token);
             if (!int.TryParse(Field(form, "DurationMinutes", 3), NumberStyles.None, CultureInfo.InvariantCulture, out var minutes)) throw InvalidForm();
             var request = new LessonRequest(Field(form, "Topic", 120), Field(form, "EducationalLevel", 40), minutes,
                 Field(form, "Instructions", 1000, optional: true));
             DomainRules.Require(DomainRules.ValidateRequest(request));
-            using var timeout = Timeout(context, 240);
             var lesson = await workflow.GenerateAsync(request, owner, null, timeout.Token);
             return Redirect($"/presenter/lessons/{lesson.Id}");
         }

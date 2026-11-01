@@ -86,7 +86,11 @@ Configure the trusted proxy addresses from the real ingress topology. Forwarded 
 
 The Web process allows at most two concurrent model operations and one per presenter. Model operations also have a six-per-ten-minute presenter rate limit. Public operations use a sixty-per-minute IP limit. The Web HTTP concurrency limit is thirty-two with no queue. The MCP service permits 120 requests per minute per caller. Rate and model-concurrency controls are per replica; the durable quiz attempt budget and transactional idempotency apply across replicas. Set an approved replica ceiling and platform limits before cloud use.
 
-Generation, quiz drafting and publication have application deadlines. Native form size and count are bounded. Anonymous submissions use antiforgery plus a protected, short-lived quiz/attempt ticket. Results disclose marking information only after a recorded submission and possession of its unpredictable result identifier.
+Generation has a handler-local 210-second cooperative deadline. Its linked cancellation token is created inside the handler's error boundary before reading the form, then passed to both form reading and generation. Quiz drafting remains 180 seconds; publication remains 120 seconds with up to ten seconds of durable recovery. Client cancellation still propagates and releases the model-operation permit.
+
+Against an ingress timeout of 240 seconds, Generate has thirty seconds of nominal headroom. Middleware and antiforgery execute before this budget starts and may already read the form. This is not an ingress-arrival deadline or a guaranteed wire-response margin. Cancellation cannot guarantee that remote model processing or billing stops.
+
+Native form size and count are bounded. Anonymous submissions use antiforgery plus a protected, short-lived quiz/attempt ticket. Results disclose marking information only after a recorded submission and possession of its unpredictable result identifier.
 
 QR generation requires a committed publication and a successful bounded fetch of its exact canonical public page, including the expected quiz identity header. An unreachable public link does not roll back a committed publication. The interface should display the link and a reachability warning until it can supply a QR image.
 
