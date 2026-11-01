@@ -58,7 +58,7 @@ containerRegistryName storageAccountName webAppName mcpAppName webImage mcpImage
 webIdentityResourceId webIdentityClientId mcpIdentityResourceId mcpIdentityClientId
 githubReleaseIdentityResourceId githubReleasePrincipalId releaseRoleDefinitionGuid
 tenantId presenterAppClientId mcpApiClientId presenterObjectIds webCanonicalFqdn
-mcpCanonicalFqdn verifiedProxyCidr foundryEndpoint tags
+mcpCanonicalFqdn foundryEndpoint tags
 """.split())
 ACTIONS = [
     "Microsoft.App/containerApps/read",
@@ -201,9 +201,8 @@ def source_checks(sources: dict[str, str]) -> None:
     check("endsWith(privateEndpointSubnetAddressPrefix, '/27')" in network, "Explicit /27 endpoint subnet guard")
     check("length(union(map(identityNames, name => toLower(name)), [])) == 4" in network, "Four distinct identity names")
     workload = sources["workloads.bicep"]
-    proxy = section(workload, "var checkedProxyCidr", "var foundryHost")
-    check("parseCidr(verifiedProxyCidr).network" in proxy and "> 0" in proxy and "fail(" in proxy,
-          "Required canonical proxy CIDR guard rejects /0 without inventing proof")
+    check(all(name not in workload for name in ("verifiedProxyCidr", "checkedProxyCidr", "KnownNetworks", "KnownProxies")),
+          "Fixed-origin deployment introduces no proxy-address trust")
     images = section(workload, "var checkedImages", "var commonEnvironment")
     check(includes_code(images, "length(split(image, '@sha256:')) == 2",
                         "length(last(split(image, '@sha256:'))) == 64",
@@ -420,15 +419,15 @@ def workload_checks(workloads: dict, source: str) -> None:
         "AzureAd__ClientCredentials__0__TokenExchangeUrl": "api://AzureADTokenExchange/.default",
         "Mcp__Endpoint": "https://${checkedMcpFqdn}/mcp", "Mcp__TokenScope": "api://${checkedMcpApiClientId}/.default",
         "DataProtection__BlobUri": "${storageAccount.properties.primaryEndpoints.blob}dataprotection/lumero-keys.xml",
-        "Foundry__Deployment": "gpt-4.1",
+        "Foundry__Deployment": "gpt-4.1", "ReverseProxy__UseFixedHttpsOrigin": "true",
     }.items()}
     expected_web.update({"AllowedHosts": "checkedWebFqdn", "AzureAd__Instance": "environment().authentication.loginEndpoint",
                          "AzureAd__TenantId": "tenantId", "AzureAd__ClientId": "presenterAppClientId",
-                         "ReverseProxy__KnownNetworks__0": "checkedProxyCidr", "Foundry__Endpoint": "checkedFoundryEndpoint"})
+                         "Foundry__Endpoint": "checkedFoundryEndpoint"})
     for name in ("AzureAd__ClientCredentials__0__ManagedIdentityClientId", "Mcp__CallerClientId", "Mcp__ManagedIdentityClientId",
                  "Storage__ManagedIdentityClientId", "DataProtection__ManagedIdentityClientId", "Foundry__ManagedIdentityClientId"):
         expected_web[name] = "checkedWebClientId"
-    check(web == expected_web, "Exact Web OIDC/assertion, proxy, DataProtection, Foundry and MCP caller contract")
+    check(web == expected_web, "Exact Web OIDC/assertion, fixed HTTPS origin, DataProtection, Foundry and MCP caller contract")
     mcp = environment_pairs(source, "var mcpEnvironment", "var checkedWebAppName")
     check(mcp == {"AllowedHosts": "checkedMcpFqdn", "Mcp__TenantId": "tenantId", "Mcp__Audience": "checkedMcpApiClientId",
                   "Mcp__CallerClientId": "checkedWebClientId", "Mcp__RequiredRole": "'Quiz.Publish'", "Storage__ManagedIdentityClientId": "checkedMcpClientId"}, "Separate MCP audience and Table identity; no Web-only settings")
@@ -478,7 +477,7 @@ def main() -> None:
     rejections = image_reference_cases(templates["workloads"]["variables"]["imageRepositories"])
     print(f"PASS: image-reference model; 2 valid controls and {rejections} bounded rejection cases in memory (not ARM execution).")
     print(f"PASS: {checks} static compiler/contract checks; 4 UAMIs, 2 ARM federations, 7+2 Azure assignments, 2 gated apps.")
-    print("NOT PROVED: proxy trust, service cap acceptance, Azure deployment/runtime behaviour. No cloud execution performed.")
+    print("NOT PROVED: live HTTPS/Host enforcement, service cap acceptance, Azure deployment/runtime behaviour. No cloud execution performed.")
 
 
 if __name__ == "__main__":

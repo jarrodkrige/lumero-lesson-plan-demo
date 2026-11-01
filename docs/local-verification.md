@@ -66,6 +66,17 @@ dotnet test tests\LessonPlanner.IntegrationTests --no-build `
 
 Coverage includes immutable drafts, provenance, conditional transactions, approval identity and expiry, concurrent publication, anonymous attempt budgets, retry conflicts, actual MCP token validation, protected participant tickets, key-provider restart and bounded payloads. A transport fault test drops a response after publication commits, then verifies that an official-client retry returns the one durable outcome. Native endpoint tests also reconcile an already committed publication when the publisher's final response fails or supplies an incorrect receipt, without repeating the action. Request cancellation remains honoured. Reachability failures preserve the publication link and withhold the QR.
 
+### Offline HTTP boundary tests
+
+Protected CI also runs the origin, shared anonymous rate, security-registration and handler-cancellation cases without an emulator, model or live credentials:
+
+```powershell
+dotnet test tests\LessonPlanner.IntegrationTests --no-restore --configuration Release `
+  --filter "FullyQualifiedName~LessonEndpointCancellationTests|FullyQualifiedName~WebOriginTests|FullyQualifiedName~WebRateLimitTests|FullyQualifiedName~WebSecurityTests"
+```
+
+These cases exercise the Production-only fixed HTTPS scheme, exact canonical Host, ignored forwarding headers, the shared 600-request-per-minute partition and unchanged 32-request concurrency limit. The real OIDC challenge and logout handlers use static test-only metadata and a backchannel that rejects external requests. They verify exact HTTPS callback URIs without performing a live sign-in. Test-only ephemeral key storage does not alter Production persistence registration. Existing publication and grading flow tests still require Azurite.
+
 Nested presenter and participant pages are checked against the real static asset host. Their stylesheet URLs are root-relative, so the strict `base-uri 'none'` policy remains in place without a blocked `<base>` element. The isolated probe tests use no real credentials or network calls.
 
 Fresh storage clients and Web/key-provider instances test persistence across application replacement. Those tests must not be described as an Azurite process restart or an Azure disaster-recovery test.

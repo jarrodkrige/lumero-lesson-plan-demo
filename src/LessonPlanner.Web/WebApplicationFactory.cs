@@ -26,6 +26,11 @@ public static class WebApplicationFactory
     {
         var configuration = builder.Configuration;
         var local = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+        if (builder.Environment.IsProduction())
+        {
+            builder.Services.AddSingleton(FixedHttpsOrigin.FromConfiguration(configuration));
+            builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
+        }
         builder.AddServiceDefaults();
         builder.WebHost.ConfigureKestrel(server => server.Limits.MaxRequestBodySize = 32_768);
         builder.Services.Configure<FormOptions>(options =>
@@ -60,9 +65,7 @@ public static class WebApplicationFactory
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
                 RateLimitPartition.GetConcurrencyLimiter("application", _ => new ConcurrencyLimiterOptions
                 { PermitLimit = 32, QueueLimit = 0 }));
-            options.AddPolicy("public", context => RateLimitPartition.GetFixedWindowLimiter(
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions
-                { PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            options.AddPolicy("public", new AnonymousRequestRateLimitPolicy());
             options.AddPolicy("model", context => RateLimitPartition.GetFixedWindowLimiter(
                 context.User.FindFirst("oid")?.Value ?? "unknown", _ => new FixedWindowRateLimiterOptions
                 { PermitLimit = 6, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
@@ -79,7 +82,8 @@ public static class WebApplicationFactory
     public static WebApplication ConfigurePipeline(WebApplication app)
     {
         var local = app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing");
-        app.UseForwardedHeaders();
+        if (app.Environment.IsProduction())
+            app.Use(app.Services.GetRequiredService<FixedHttpsOrigin>().InvokeAsync);
         app.Use(async (context, next) =>
         {
             context.Response.Headers.CacheControl = "no-store";

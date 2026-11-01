@@ -8,7 +8,7 @@ from uuid import UUID
 from common import Refusal, command, require
 
 LIVENESS = """exec 3<>/dev/tcp/127.0.0.1/8080
-printf 'GET /health/live HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3
+printf 'GET /health/live HTTP/1.1\\r\\nHost: classroom.test\\r\\nConnection: close\\r\\n\\r\\n' >&3
 IFS= read -r -t 3 status <&3
 [[ "$status" == "HTTP/1.1 200 "* ]]
 """
@@ -23,11 +23,12 @@ def configuration(kind):
         "ASPNETCORE_ENVIRONMENT": "Production", "DOTNET_ENVIRONMENT": "Production",
         "DOTNET_EnableDiagnostics": "0",
         "Storage__TableServiceUri": "https://storage.invalid", "Storage__ManagedIdentityClientId": identity,
-        "Quiz__PublicBaseUrl": "https://classroom.test",
+        "Quiz__PublicBaseUrl": "https://classroom.test", "AllowedHosts": "classroom.test",
         "Mcp__CallerClientId": caller,
     }
     if kind == "web":
         values.update({
+            "ReverseProxy__UseFixedHttpsOrigin": "true",
             "AzureAd__TenantId": tenant, "AzureAd__ClientId": web,
             "AzureAd__ClientCredentials__0__SourceType": "SignedAssertionFromManagedIdentity",
             "AzureAd__ClientCredentials__0__ManagedIdentityClientId": identity,

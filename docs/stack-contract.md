@@ -29,7 +29,7 @@ Configuration names reserved for integration:
 - `Storage__TableServiceUri`, `Storage__TableName` (default `lessonplanner`), `Storage__ManagedIdentityClientId`: Entra Azure Table access. The Table must exist before production startup.
 - `Storage__ConnectionString`: development emulator only, rejected outside Development/Testing and limited to loopback Azurite. Not a production key option.
 - `DataProtection__BlobUri`: durable cookie/CSRF key ring. `DataProtection__ManagedIdentityClientId`: Blob identity. Provision the private container separately.
-- `ReverseProxy__KnownNetworks__0`: explicit trusted ingress CIDR. The Web service accepts forwarded protocol and client address through one trusted hop. Do not trust an Internet-wide network.
+- `ReverseProxy__UseFixedHttpsOrigin`: defaults on in Production and has no effect outside Production. HTTPS-only ingress is required and must be verified. Web fixes the request scheme before other application middleware and accepts only the canonical configured Host, aligned with `AllowedHosts`. It consumes no forwarded header or trusted proxy network. Public requests share a per-process 600/minute partition with no queue; HTTP concurrency remains 32.
 - `Foundry__Endpoint`: Azure OpenAI v1 HTTPS model endpoint for application-hosted inference. `Foundry__Deployment`, `Foundry__ManagedIdentityClientId`: approved deployment and identity. No model endpoint or credentials are sent to browsers.
 - `Quiz__PublicBaseUrl`: canonical externally reachable HTTPS web origin, never derived from a request Host header. `Quiz__LifetimeHours` defaults to 24; `Quiz__ApprovalMinutes` defaults to 5; `Quiz__MaximumAttempts` defaults to 200.
 

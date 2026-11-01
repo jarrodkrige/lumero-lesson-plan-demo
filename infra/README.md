@@ -7,8 +7,8 @@ Standalone Bicep for the existing application, not an `azd` scaffold. This direc
 ## Entry-point order and ownership
 
 1. **Privileged foundation bootstrap: `main.bicep`, subscription scope.** Creates the new application resource group, foundation, one custom release role and seven Azure role assignments. ACA itself creates the separately named service-managed resource group. No Container App or probe application is deployed. The existing Foundry account receives only the Web OpenAI User assignment; no account, project, deployment or networking setting is changed. The role definition is created here, so no separate role-definition entry point is needed.
-2. **Stop at the production gates.** The execution owner must obtain authoritative evidence for a stable, exclusive, narrow immediate-proxy CIDR. A successful build, a guessed platform/VNet subnet, an observed peer, or the parameter's syntax check is not that evidence. Complete the external Graph bootstrap, protected image-digest build, canonical-host planning and other execution approvals separately. Foundation availability is not permission to start production authentication or inference.
-3. **Privileged workload bootstrap: `workloads.bicep`, application resource-group scope.** References the existing foundation; creates only the two configured apps and two app-scoped release assignments. Requires the verified proxy CIDR, immutable images and distinct identity/application inputs. Foundation and custom-role outputs must already exist. Account for RBAC propagation without adding broader grants or secret fallbacks.
+2. **Complete the production prerequisites.** Complete external Graph bootstrap, protected image-digest build, exact canonical-host configuration and execution approval. The fixed-origin variant requires HTTPS-only ingress, with `allowInsecure=false` verified through ARM before production authentication. It consumes no forwarded headers and requires no proxy CIDR. Foundation availability does not prove application authentication or inference.
+3. **Privileged workload bootstrap: `workloads.bicep`, application resource-group scope.** References the existing foundation; creates only the two configured apps and two app-scoped release assignments. Requires immutable images and distinct identity/application inputs. Foundation and custom-role outputs must already exist. Account for RBAC propagation without adding broader grants or secret fallbacks.
 4. **Routine release is not bootstrap.** The GitHub release identity updates the two existing apps using its approved actions. It must not redeploy either privileged entry point. `containerApps/write` is not field-level “image-only” authorisation: the release workflow must constrain its updates. Compatibility of the chosen update client with the exact role remains an execution-owner gate; missing permissions do not justify silently broadening the role.
 
 These steps describe order, not commands to execute. New resource-group names must actually be unused; ARM resource declarations alone cannot guarantee this. Bootstrap requires pre-existing authority at the relevant subscription/new RG and the one existing Foundry account. Nothing here signs in or grants the deployer additional permissions.
@@ -73,7 +73,7 @@ Both entry points require `tags` with exactly `owner`, `workshop`, `approved-exp
 
 The application and managed RG names must differ. Identity names must be distinct; subnet names and the two private-endpoint names must also differ. No private address or resource naming scheme is supplied by the templates.
 
-### `workloads.bicep`: 25 parameters
+### `workloads.bicep`: 24 parameters
 
 | Parameter(s) | Source / meaning |
 | --- | --- |
@@ -88,11 +88,10 @@ The application and managed RG names must differ. Identity names must be distinc
 | `tenantId`, `presenterAppClientId`, `mcpApiClientId`, `presenterObjectIds` | Distinct approved tenant/Graph inputs. Presenter allowlist contains one to twenty object IDs, never UPNs or an implicit deployment identity. |
 | `webCanonicalFqdn` | Exact `<webAppName>.<main.containerAppsEnvironment.defaultDomain>`, without scheme/path. |
 | `mcpCanonicalFqdn` | Exact `<mcpAppName>.internal.<main.containerAppsEnvironment.defaultDomain>`, without scheme/path. |
-| `verifiedProxyCidr` | **Blocked until authoritative proof** of the immediate proxy's stable, exclusive, narrow CIDR. No default, guessed range, `/0` or observed-peer-only proof. |
 | `foundryEndpoint` | Explicit approved existing-account HTTPS `/openai/v1/` URL, not a project URL; no credentials, query or fallback. Must correspond to the exact account granted in foundation. IaC does not infer this from private account metadata. |
 | `tags` | Same required operational labels. |
 
-Client/principal inputs are cross-checked against the existing UAMIs and tenant. Hostnames are checked against the actual environment default domain. These checks cannot establish that a proxy range is trustworthy, that the Foundry endpoint/deployment is operational, or that an input was administratively approved.
+Client/principal inputs are cross-checked against the existing UAMIs and tenant. Hostnames are checked against the actual environment default domain. These checks cannot establish live HTTPS/Host enforcement, that the Foundry endpoint/deployment is operational, or that an input was administratively approved.
 
 ### Machine-readable outputs (no credentials)
 
@@ -127,12 +126,16 @@ Both containers run `Production` with `ASPNETCORE_HTTP_PORTS=8080`, warning-leve
 | `Mcp__TokenScope` | `api://<mcp-api-client-id>/.default` |
 | `Mcp__CallerClientId`, `Mcp__ManagedIdentityClientId` | Web UAMI client ID |
 | `DataProtection__BlobUri`, `DataProtection__ManagedIdentityClientId` | Private-resolved Blob service URI plus `dataprotection/lumero-keys.xml`; Web UAMI client ID |
-| `ReverseProxy__KnownNetworks__0` | Required verified CIDR, and nothing broader |
+| `ReverseProxy__UseFixedHttpsOrigin` | Fixed `true`; Production-only HTTPS scheme and exact canonical Host |
 | `Foundry__Endpoint`, `Foundry__Deployment`, `Foundry__ManagedIdentityClientId` | Explicit existing-account `/openai/v1/` endpoint; fixed `gpt-4.1`; Web UAMI client ID |
 
 MCP receives `Mcp__TenantId`, `Mcp__Audience=<mcp-api-client-ID-GUID>` (**not** the `api://.../.default` scope), `Mcp__CallerClientId=<web-uami-client-id>`, and `Mcp__RequiredRole=Quiz.Publish`. It gets no Presenter OIDC, Blob, Foundry or Web reverse-proxy configuration. OIDC audience, MCP audience, managed-identity selection, and the application's separate Foundry `https://ai.azure.com/.default` token scope remain distinct.
 
-No `ASPNETCORE_FORWARDEDHEADERS_ENABLED`, trust-list clearing, wildcard AllowedHosts or new proxy/probe app is introduced. Source one-hop forwarding and middleware ordering remain unchanged, as does DataProtection's application name `Lumero.LessonPlanner.v1`.
+No `ASPNETCORE_FORWARDEDHEADERS_ENABLED`, trust-list clearing, wildcard AllowedHosts or new proxy/probe app is introduced. The production Web boundary fixes the HTTPS scheme before other application middleware and rejects any non-canonical Host, including on probe paths. It does not consume `X-Forwarded-Proto`, `X-Forwarded-For` or `X-Forwarded-Host`, and adds no trusted proxy/network. DataProtection's application name remains `Lumero.LessonPlanner.v1`.
+
+This is a revision-2 deviation from the former proxy-CIDR prerequisite, using [ASP.NET Core's documented fixed-scheme approach when all external requests are secure](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0#when-it-isnt-possible-to-add-forwarded-headers-and-all-requests-are-secure). ACA enforces external HTTPS; the application does not infer origin or participant IP from a header. `ReverseProxy__UseFixedHttpsOrigin` defaults on in Production and has no effect in Development/Testing. Verify the effective ingress, exact OIDC HTTPS redirect, ignored spoofed headers and accepted health probes before live authentication. No inference is needed for those checks.
+
+The anonymous request-rate partition is shared across participants: **600 requests per minute, fixed window, zero queue**. This provides request headroom for sixty active participants submitting within a minute. Existing Web concurrency is **32 requests, zero queue**, so this does not guarantee sixty requests executing simultaneously. Presenter limits, antiforgery, secure cookies, identity audiences and persistence controls are unchanged. Rate/concurrency limits remain per process and reset on replacement or overlap; the durable attempt budget remains server-owned.
 
 ### Actual health routes
 
@@ -142,7 +145,7 @@ No `ASPNETCORE_FORWARDEDHEADERS_ENABLED`, trust-list clearing, wildcard AllowedH
 | Liveness | HTTP 8080 `/health/live` | Platform default | 10s | 3s | 3 |
 | Readiness | HTTP 8080 `/health/ready` | Platform default | 10s | 6s | 3 |
 
-All success thresholds are one. Each HTTP probe supplies `Host` equal to that app's exact `AllowedHosts`. The existing application's Table readiness timeout stays **five seconds**, within the six-second HTTP readiness timeout. Compilation cannot prove Linux startup, proxy forwarding, HTTPS redirects, identity propagation or actual probe acceptance.
+All success thresholds are one. Each HTTP probe supplies `Host` equal to that app's exact `AllowedHosts`. The existing application's Table readiness timeout stays **five seconds**, within the six-second HTTP readiness timeout. Compilation cannot prove Linux startup, HTTPS ingress or exact redirects, identity propagation or actual probe acceptance.
 
 ## Pinned modules and bounded direct resources
 
@@ -186,10 +189,10 @@ python -B infra\validate.py
 
 Local compilation and checks were run with **Bicep CLI 0.44.1 (28275db947)**. The standard-library-only checker locates an **already installed** `bicep` (PATH or the existing Azure CLI cache), or accepts `--bicep <installed-executable>`. It never invokes Azure CLI, signs in, installs tools, starts services or reads private parameter files. Bicep may restore the public pinned modules to its normal local module cache; an unavailable compiler/registry route is an error, not an installation or deployment fallback.
 
-Checks run `bicep lint` and verify formatting of authored Bicep/parameter examples, compile both entry points and both invalid examples via `--stdout` into memory, and inspect the selected authored/compiled contracts: required inputs, fixed cardinality, scoped grants, security settings, auth environment, immutable images, proxy gate and health probes. No compiled-result files are written. Static checks examine selected module parameters rather than counting every inactive AVM branch; they are not an ARM expression evaluator or Azure deployment validation. `git diff --check -- infra` is an additional whitespace check. If changing Bicep later, format it and **rerun lint**.
+Checks run `bicep lint` and verify formatting of authored Bicep/parameter examples, compile both entry points and both invalid examples via `--stdout` into memory, and inspect the selected authored/compiled contracts: required inputs, fixed cardinality, scoped grants, security settings, auth environment, immutable images, fixed HTTPS origin and health probes. No compiled-result files are written. Static checks examine selected module parameters rather than counting every inactive AVM branch; they are not an ARM expression evaluator or Azure deployment validation. `git diff --check -- infra` is an additional whitespace check. If changing Bicep later, format it and **rerun lint**.
 
 Image checks bind the compiled repository order, authored exact-path guard and container image selection, and check the deliberately invalid examples. A bounded in-memory reference model exercises two valid controls plus wrong, swapped, nested, tagged, malformed-digest and foreign-registry inputs. These cases check the image contract, not ARM expression execution or image availability.
 
 ### Remaining execution gates
 
-There is **no verified immediate-proxy CIDR** in this repository. That remains a hard workload/authentication/inference gate. The proposed Log Analytics 0.1 GB cap also needs actual service acceptance/effective-value verification; caps can overshoot and stop logging and are not budget limits. Provider/API availability (including the pinned ACR preview API), regional capacity, policy, name/address availability, DNS/private connectivity, identity/RBAC propagation, Graph bootstrap, protected digest builds, release-client role sufficiency, and actual Linux/ingress/probe behaviour need execution-owner checks under separate authorisation. No deployment validation, what-if, cloud write, inference, sign-in or permission mutation is performed by this implementation or its validator.
+The fixed-origin variant requires **verified HTTPS-only ingress and the exact canonical Host** before production authentication. No proxy CIDR is consumed or needed. Read `allowInsecure=false` through ARM, then verify HTTP refusal/redirection, the exact registered HTTPS OIDC redirect, ignored spoofed forwarding headers, rejection of a non-canonical Host and successful canonical-host probes. These checks require no inference. The proposed Log Analytics 0.1 GB cap also needs actual service acceptance/effective-value verification; caps can overshoot and stop logging and are not budget limits. Provider/API availability (including the pinned ACR preview API), regional capacity, policy, name/address availability, DNS/private connectivity, identity/RBAC propagation, Graph bootstrap, protected digest builds, release-client role sufficiency, and actual Linux/ingress/probe behaviour need execution-owner checks under separate authorisation. No deployment validation, what-if, cloud write, inference, sign-in or permission mutation is performed by this implementation or its validator.

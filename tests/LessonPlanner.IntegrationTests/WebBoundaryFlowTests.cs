@@ -107,7 +107,7 @@ public sealed class WebBoundaryFlowTests(LocalTableFixture storage)
         await using var host = await WebTestHost.StartAsync(storage);
         using var participant = host.Client();
         var missingQuiz = DomainRules.NewId();
-        for (var index = 0; index < 60; index++)
+        for (var index = 0; index < 600; index++)
         {
             using var allowed = await participant.GetAsync($"/quiz/{missingQuiz}");
             Assert.Equal(HttpStatusCode.NotFound, allowed.StatusCode);

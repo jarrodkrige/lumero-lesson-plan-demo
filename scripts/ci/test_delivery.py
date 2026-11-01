@@ -470,6 +470,18 @@ class StartupTests(OfflineCase):
                 self.assertIn(origin.path, ("", "/"))
                 self.assertFalse(origin.username or origin.query or origin.fragment)
 
+    def test_probe_host_matches_the_exact_synthetic_https_origin(self):
+        for kind in ("web", "mcp"):
+            with self.subTest(kind=kind):
+                configuration = smoke.configuration(kind)
+                host = urlsplit(configuration["Quiz__PublicBaseUrl"]).hostname
+                self.assertEqual(configuration["AllowedHosts"], host)
+                self.assertIn(f"Host: {host}", smoke.LIVENESS)
+                self.assertNotIn("X-Forwarded-", smoke.LIVENESS)
+                self.assertFalse(any("KnownNetworks" in key or "KnownProxies" in key for key in configuration))
+        self.assertEqual(smoke.configuration("web")["ReverseProxy__UseFixedHttpsOrigin"], "true")
+        self.assertNotIn("ReverseProxy__UseFixedHttpsOrigin", smoke.configuration("mcp"))
+
     def test_created_container_is_removed_when_start_fails(self):
         container_id = "c" * 64
         with patch("smoke.command", side_effect=[container_id, common.Refusal("start failed"), ""]) as run, \

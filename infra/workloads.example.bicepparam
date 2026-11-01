@@ -1,4 +1,4 @@
-// Compile-only, deliberately nondeployable example. The proxy gate is NOT proved.
+// Compile-only, deliberately nondeployable example. HTTPS ingress requires live verification.
 // Foundation outputs and Graph bootstrap supply distinct private IDs, not credentials.
 using './workloads.bicep'
 
@@ -24,7 +24,6 @@ param mcpApiClientId = '<separate-mcp-api-client-id>'
 param presenterObjectIds = ['<approved-presenter-object-id>']
 param webCanonicalFqdn = 'web.invalid'
 param mcpCanonicalFqdn = 'mcp.internal.invalid'
-param verifiedProxyCidr = '<BLOCKED-until-authoritative-narrow-proxy-proof>'
 param foundryEndpoint = 'https://existing-foundry.invalid/openai/v1/'
 param tags = {
   owner: '<non-pii-owner-label>'

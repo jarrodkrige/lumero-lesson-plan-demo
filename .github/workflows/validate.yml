@@ -43,16 +43,16 @@ jobs:
           dotnet test tests/LessonPlanner.FoundryHostProbe.Tests/LessonPlanner.FoundryHostProbe.Tests.csproj
           --no-build --no-restore --configuration Release
           --logger 'trx;LogFileName=probe.trx' --results-directory scripts/ci/.state/test-results
-      - name: Run handler cancellation tests without services or credentials
+      - name: Run HTTP origin, rate, security and handler tests without services or credentials
         run: >-
           dotnet test tests/LessonPlanner.IntegrationTests/LessonPlanner.IntegrationTests.csproj
           --no-build --no-restore --configuration Release
-          --filter 'FullyQualifiedName~LessonEndpointCancellationTests'
-          --logger 'trx;LogFileName=handler-cancellation.trx' --results-directory scripts/ci/.state/test-results
+          --filter 'FullyQualifiedName~LessonEndpointCancellationTests|FullyQualifiedName~WebOriginTests|FullyQualifiedName~WebRateLimitTests|FullyQualifiedName~WebSecurityTests'
+          --logger 'trx;LogFileName=web-boundaries.trx' --results-directory scripts/ci/.state/test-results
       - name: Require actual executed passing test cases
         run: >-
           python3 -B scripts/ci/verify_trx.py
           scripts/ci/.state/test-results/unit.trx scripts/ci/.state/test-results/probe.trx
-          scripts/ci/.state/test-results/handler-cancellation.trx
+          scripts/ci/.state/test-results/web-boundaries.trx
       - name: Build and start production images on native AMD64 without credentials or egress
         run: python3 -B scripts/ci/images.py validate

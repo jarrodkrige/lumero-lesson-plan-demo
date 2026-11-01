@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Identity.Web;
 
 namespace LessonPlanner.Web.Security;
@@ -94,13 +93,6 @@ public static class WebSecurityRegistration
             keys.PersistKeysToAzureBlobStorage(blob,
                 InfrastructureRegistration.CreateCredential(configuration["DataProtection:ManagedIdentityClientId"], false));
         }
-        services.Configure<ForwardedHeadersOptions>(options =>
-        {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
-            options.ForwardLimit = 1;
-            foreach (var cidr in configuration.GetSection("ReverseProxy:KnownNetworks").Get<string[]>() ?? [])
-                options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(cidr));
-        });
         return services;
     }
 

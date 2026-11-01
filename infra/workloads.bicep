@@ -95,10 +95,6 @@ param webCanonicalFqdn string
 @minLength(1)
 param mcpCanonicalFqdn string
 
-@description('Required HARD GATE. One authoritatively proved stable, exclusive, narrow immediate-proxy CIDR. No default, guessed subnet, observed-peer-only proof, or /0. Syntax checks do not establish trust.')
-@minLength(3)
-param verifiedProxyCidr string
-
 @description('Required PRIVATE INPUT. The approved EXISTING account HTTPS endpoint ending exactly /openai/v1/. No project URL, credentials, query, or fallback.')
 @minLength(1)
 param foundryEndpoint string
@@ -174,15 +170,6 @@ var checkedWebFqdn = webCanonicalFqdn == '${webAppName}.${managedEnvironment.pro
 var checkedMcpFqdn = mcpCanonicalFqdn == '${mcpAppName}.internal.${managedEnvironment.properties.defaultDomain}'
   ? mcpCanonicalFqdn
   : fail('MCP must use its exact internal foundation-environment hostname.')
-
-// This rejects malformed/network-wide placeholders, NOT unproved trust claims.
-// Authoritative ownership/stability evidence plus controlled checks are an operator gate.
-var checkedProxyCidr = length(split(verifiedProxyCidr, '/')) == 2 && int(last(split(verifiedProxyCidr, '/'))) > 0 && parseCidr(verifiedProxyCidr).network == first(split(
-    verifiedProxyCidr,
-    '/'
-  ))
-  ? verifiedProxyCidr
-  : fail('Supply only the canonical, authoritatively verified narrow proxy CIDR; never /0 or a guessed range.')
 
 var foundryHost = split(foundryEndpoint, '/')[?2] ?? ''
 var checkedFoundryEndpoint = startsWith(foundryEndpoint, 'https://') && endsWith(foundryEndpoint, '/openai/v1/') && length(split(
@@ -262,7 +249,7 @@ var webEnvironment = concat(
       value: '${storageAccount.properties.primaryEndpoints.blob}dataprotection/lumero-keys.xml'
     }
     { name: 'DataProtection__ManagedIdentityClientId', value: checkedWebClientId }
-    { name: 'ReverseProxy__KnownNetworks__0', value: checkedProxyCidr }
+    { name: 'ReverseProxy__UseFixedHttpsOrigin', value: 'true' }
     { name: 'Foundry__Endpoint', value: checkedFoundryEndpoint }
     { name: 'Foundry__Deployment', value: 'gpt-4.1' }
     { name: 'Foundry__ManagedIdentityClientId', value: checkedWebClientId }

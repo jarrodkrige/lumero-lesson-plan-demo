@@ -8,7 +8,7 @@ This is an operator contract for the separate presenter and MCP identities. It d
 - Establish currently active authority for each registration, federation, service-principal and application-role operation. Azure subscription roles do not establish Entra directory authority; eligible roles are not active rights. Do not activate roles, add Graph permissions to the runtime apps or broaden a grant to pass a check.
 - Respect interactive authentication and Conditional Access challenges. The user completes credentials and MFA personally. Stop on a challenge; do not clear caches, substitute credentials or retry a write whose outcome is unknown.
 - Obtain the actual Web user-assigned managed identity (UAMI) client and principal IDs from the approved foundation outputs. They are different identifiers.
-- Establish the canonical HTTPS origin and an authoritative immediate-proxy trust boundary before enabling production presenter authentication. An observed peer or the application subnet alone is not that proof. No trust-all or global forwarded-header bypass is permitted.
+- Establish the exact canonical HTTPS origin before enabling production presenter authentication. Read ACA ingress back with `allowInsecure=false`, verify HTTP refusal/redirection and the exact HTTPS OIDC callback. The Production fixed-origin boundary consumes no forwarded headers or proxy-network trust. Spoofed protocol/host/client-IP headers must not affect it; see [the ingress contract](configuration.md#public-url-ingress-and-limits).
 - Respect the approved operating period and resource/model limits. Template compilation and this document are not deployment or live-acceptance evidence.
 
 ## Identifier mapping
@@ -120,7 +120,7 @@ Keep build registry permissions, runtime pulls/data access and the narrow two-ap
 
 ## Verification and receipts
 
-Before inference, retain non-sensitive pass/fail evidence for the actual HTTPS origin, safe forwarded headers, callbacks, secure cookie and antiforgery, presenter denial outside the allowlist, correct app-only MCP audience/caller/role, private storage and managed-identity access. Never publish tokens, key-ring contents, prompts or credential material. Negative cases must stay within the approved identities and limits.
+Before inference, retain non-sensitive pass/fail evidence for the actual HTTPS-only ingress, canonical Host, ignored spoofed forwarded headers, exact callbacks, secure cookie and antiforgery, presenter denial outside the allowlist, correct app-only MCP audience/caller/role, private storage and managed-identity access. Never publish tokens, key-ring contents, prompts or credential material. Negative cases must stay within the approved identities and limits.
 
 Keep bootstrap receipts distinct from local synthetic tests and from later real model, publication, persistence/restart and external-device acceptance. A directory grant alone is not an end-to-end result. See [application configuration](configuration.md) and the [infrastructure contract](../infra/README.md).
 

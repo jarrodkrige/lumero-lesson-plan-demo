@@ -81,11 +81,16 @@ Each role is an application-hosted Agent Framework agent. Application code owns 
 - `Quiz__LifetimeHours`: 24 by default; permitted duration is five minutes to seven days.
 - `Quiz__ApprovalMinutes`: 5 by default; permitted duration is thirty seconds to ten minutes.
 - `Quiz__MaximumAttempts`: 200 by default; range is 1 to 1000.
-- `ReverseProxy__KnownNetworks__0`: the actual trusted ingress CIDR; add explicit numeric entries as necessary.
+- `ReverseProxy__UseFixedHttpsOrigin`: defaults to `true` in Production and acts only in Production. The deployment explicitly enables it.
+- `AllowedHosts`: exactly the host in `Quiz__PublicBaseUrl` for the production Web service. No wildcard, extra hostname or nonstandard authority port is permitted.
 
-Configure the trusted proxy addresses from the real ingress topology. Forwarded protocol and client address are accepted through one trusted hop. Do not add an Internet-wide trusted network to make redirects work. Ensure the edge restricts accepted hostnames, and configure ASP.NET `AllowedHosts` where compatible with the platform's health-probe Host header. The quiz origin is never inferred from a request Host header.
+Production startup validates both settings, even when the fixed-scheme flag is disabled. The canonical origin must contain a non-loopback ASCII DNS hostname; IP literals, trailing dots and ambiguous paths are rejected. Requests may use the canonical host case-insensitively with an optional explicit `:443`; the boundary normalises that authority. With the flag disabled, strict Host validation remains and the existing HTTP-to-HTTPS redirect runs before authentication.
 
-The Web process allows at most two concurrent model operations and one per presenter. Model operations also have a six-per-ten-minute presenter rate limit. Public operations use a sixty-per-minute IP limit. The Web HTTP concurrency limit is thirty-two with no queue. The MCP service permits 120 requests per minute per caller. Rate and model-concurrency controls are per replica; the durable quiz attempt budget and transactional idempotency apply across replicas. Set an approved replica ceiling and platform limits before cloud use.
+The Web production boundary sets the request scheme to HTTPS before other application middleware, then rejects a non-canonical Host. It reads no `X-Forwarded-*` header and establishes no proxy-network or client-address trust. This follows [ASP.NET Core's fixed-scheme guidance when every external request is secure](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0#when-it-isnt-possible-to-add-forwarded-headers-and-all-requests-are-secure). The edge must enforce HTTPS. For ACA, configure `allowInsecure=false` and verify the effective setting before production authentication. Do not deploy this mode behind an edge that accepts insecure external traffic. The quiz origin remains server configuration, never a request-derived value.
+
+Health probes send the exact configured Host, including the canonical Web Host on the internal HTTP probe. There is no hostname exception for probe paths. Local Development and Testing keep their normal request schemes.
+
+The Web process allows at most two concurrent model operations and one per presenter. Model operations also have a six-per-ten-minute presenter rate limit. Public operations share one **600-request-per-minute fixed-window partition with no queue**, independently of direct IP or forwarded headers. This accommodates at least sixty active participants submitting within a minute with request headroom; it does not permit sixty requests to execute simultaneously. The Web HTTP concurrency limit remains thirty-two with no queue. The MCP service permits 120 requests per minute per caller. Rate and model-concurrency controls are per process and reset on replacement; the durable quiz attempt budget and transactional idempotency apply across replicas. The fixed deployment uses one replica per app.
 
 Generation has a handler-local 210-second cooperative deadline. Its linked cancellation token is created inside the handler's error boundary before reading the form, then passed to both form reading and generation. Quiz drafting remains 180 seconds; publication remains 120 seconds with up to ten seconds of durable recovery. Client cancellation still propagates and releases the model-operation permit.
 
@@ -97,6 +102,6 @@ QR generation requires a committed publication and a successful bounded fetch of
 
 ## Logging and data handling
 
-Default logging is Warning. Do not enable HTTP bodies, identity tokens, sensitive Agent Framework diagnostics, prompt transcripts or hidden reasoning in application telemetry. Activity shown to the presenter is limited to safe workflow events and persisted state. Participant records contain no names, email addresses or IP addresses. IP addresses are used transiently by the rate limiter.
+Default logging is Warning. Do not enable HTTP bodies, identity tokens, sensitive Agent Framework diagnostics, prompt transcripts or hidden reasoning in application telemetry. Activity shown to the presenter is limited to safe workflow events and persisted state. Participant records contain no names, email addresses or IP addresses. The shared anonymous rate partition does not use an IP address.
 
 Local model outputs, local sign-in routes and test signing material belong only to the test harness. Never deploy `LessonPlanner.LocalHarness`, reference the integration-test assembly from production, or expose an emulator to a public interface.
