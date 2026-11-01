@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 .playwright/
 .env.*
 !.env.example
+
+# Local Azure plans and per-environment state
+.azure/
