@@ -47,8 +47,10 @@ The one custom role has only `Microsoft.App/containerApps/read`, `Microsoft.App/
 
 Two ARM UAMI federations have issuer `https://token.actions.githubusercontent.com`, audience `api://AzureADTokenExchange`, and these exact subjects:
 
-- `repo:jarrodkrige/lumero-lesson-plan-demo:environment:lumero-build`
-- `repo:jarrodkrige/lumero-lesson-plan-demo:environment:lumero-release`
+- `repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:lumero-build`
+- `repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:lumero-release`
+
+These are this public repository's immutable GitHub owner/repository IDs, not Azure identifiers. [GitHub's immutable subject format](https://docs.github.com/en/actions/reference/security/oidc#immutable-subject-claims) applies to repositories created after 15 July 2026 and to opted-in repositories. Read `GET /repos/{owner}/{repo}/actions/oidc/customization/sub` before bootstrap and match its `sub_claim_prefix`; do not infer the old plain-name format or disable immutable subjects. The runner guard and both ARM credentials must agree. A fork needs its own exact binding and corresponding reviewed source changes. A subject-contract correction requires reconciliation, focused validation and a new protected workflow run; do not rerun a failed delivery or print token claims.
 
 The third trust is **external Graph bootstrap**, not another UAMI ARM federation: the Presenter confidential application trusts the Web UAMI **principal/object ID**. Its assertion issuer is the approved tenant's Entra v2 issuer and its federation audience is `api://AzureADTokenExchange`. Microsoft.Identity.Web selects the Web UAMI by **client ID** and requests `api://AzureADTokenExchange/.default` for the assertion. Graph also owns the separate MCP API application, v2 access-token setting, `Quiz.Publish` application role and the Web service principal's app-role assignment. IaC creates none of these Graph objects or grants.
 

@@ -158,7 +158,7 @@ module githubBuildIdentityModule 'br/public:avm/res/managed-identity/user-assign
       {
         name: githubBuildFederatedCredentialName
         issuer: 'https://token.actions.githubusercontent.com'
-        subject: 'repo:jarrodkrige/lumero-lesson-plan-demo:environment:lumero-build'
+        subject: 'repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:lumero-build'
         audiences: ['api://AzureADTokenExchange']
       }
     ]
@@ -176,7 +176,7 @@ module githubReleaseIdentityModule 'br/public:avm/res/managed-identity/user-assi
       {
         name: githubReleaseFederatedCredentialName
         issuer: 'https://token.actions.githubusercontent.com'
-        subject: 'repo:jarrodkrige/lumero-lesson-plan-demo:environment:lumero-release'
+        subject: 'repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:lumero-release'
         audiences: ['api://AzureADTokenExchange']
       }
     ]

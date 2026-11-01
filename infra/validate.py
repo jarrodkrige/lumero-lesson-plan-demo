@@ -259,7 +259,7 @@ def foundation_checks(main: dict) -> None:
             subset(trust, {
                 "issuer": "https://token.actions.githubusercontent.com",
                 "audiences": ["api://AzureADTokenExchange"],
-                "subject": "repo:jarrodkrige/lumero-lesson-plan-demo:environment:" + environment,
+                "subject": "repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:" + environment,
             }, "Exact protected GitHub environment federation")
             federation_count += 1
     check(federation_count == 2, "Exactly two ARM federations; Graph trust stays external")

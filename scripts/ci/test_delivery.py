@@ -117,7 +117,8 @@ def image_fixture(kind="web"):
 
 def claims():
     return {
-        "iss": auth.ISSUER, "aud": auth.AUDIENCE, "sub": f"repo:{common.REPOSITORY}:environment:lumero-build",
+        "iss": auth.ISSUER, "aud": auth.AUDIENCE,
+        "sub": "repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:lumero-build",
         "repository": common.REPOSITORY, "ref": common.REF, "sha": SOURCE,
         "workflow_ref": context()["GITHUB_WORKFLOW_REF"], "workflow_sha": SOURCE,
         "event_name": "workflow_dispatch", "runner_environment": "github-hosted",
@@ -264,6 +265,16 @@ class GuardTests(OfflineCase):
 
 
 class AuthTests(OfflineCase):
+    def test_immutable_subject_binds_both_ids_and_each_protected_environment(self):
+        prefix = "repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999"
+        for environment in ("lumero-build", "lumero-release"):
+            with self.subTest(environment=environment):
+                auth.validate_claims(claims() | {"sub": f"{prefix}:environment:{environment}"}, environment, SOURCE)
+                for rejected in (f"repo:{common.REPOSITORY}", prefix.replace("10612771", "10612772"),
+                                 prefix.replace("1441161999", "1441162000")):
+                    with self.subTest(rejected=rejected), self.assertRaises(common.Refusal):
+                        auth.validate_claims(claims() | {"sub": f"{rejected}:environment:{environment}"}, environment, SOURCE)
+
     def test_oidc_claims_bind_source_environment_and_audience(self):
         auth.validate_claims(claims(), "lumero-build", SOURCE)
         for key in claims():

@@ -16,7 +16,7 @@ ISSUER = "https://token.actions.githubusercontent.com"
 def validate_claims(claims, environment, source):
     expected = {
         "iss": ISSUER, "aud": AUDIENCE,
-        "sub": f"repo:{REPOSITORY}:environment:{environment}",
+        "sub": f"repo:jarrodkrige@10612771/lumero-lesson-plan-demo@1441161999:environment:{environment}",
         "repository": REPOSITORY, "ref": REF, "sha": source,
         "workflow_ref": f"{REPOSITORY}/.github/workflows/delivery.yml@{REF}",
         "workflow_sha": source, "event_name": "workflow_dispatch", "runner_environment": "github-hosted",
