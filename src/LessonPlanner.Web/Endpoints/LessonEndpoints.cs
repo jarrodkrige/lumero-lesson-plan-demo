@@ -32,7 +32,8 @@ public static class LessonEndpoints
     {
         var owner = presenter.RequireIdentity();
         using var permit = gate.TryEnter(owner);
-        if (permit is null) return Redirect("/presenter?error=busy");
+        if (permit is null) return ActionRedirect("/presenter?error=busy",
+            "The lesson service is busy. Wait a moment before trying again.", 409);
         try
         {
             using var timeout = Timeout(context, 210);
@@ -42,10 +43,12 @@ public static class LessonEndpoints
                 Field(form, "Instructions", 1000, optional: true));
             DomainRules.Require(DomainRules.ValidateRequest(request));
             var lesson = await workflow.GenerateAsync(request, owner, null, timeout.Token);
-            return Redirect($"/presenter/lessons/{lesson.Id}");
+            return ActionRedirect($"/presenter/lessons/{lesson.Id}");
         }
-        catch (DomainException) { return Redirect("/presenter?error=validation"); }
-        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested) { return Redirect("/presenter?error=service"); }
+        catch (DomainException) { return ActionRedirect("/presenter?error=validation",
+            "Check the topic, educational level and lesson length, then try again.", 422); }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested) { return ActionRedirect("/presenter?error=service",
+            "The lesson request timed out. Completion could not be confirmed. No request has been repeated.", 503); }
     }
 
     private static async Task<IResult> Draft(string id, HttpContext context, PresenterAccess presenter, ILessonWorkflow workflow, ModelWorkGate gate)
@@ -53,15 +56,24 @@ public static class LessonEndpoints
         if (!DomainRules.IsId(id)) return Results.NotFound();
         var owner = presenter.RequireIdentity();
         using var permit = gate.TryEnter(owner);
-        if (permit is null) return Redirect($"/presenter/lessons/{id}?error=busy");
+        if (permit is null) return ActionRedirect($"/presenter/lessons/{id}?error=busy",
+            "The quiz service is busy. Wait a moment before trying again.", 409);
         try
         {
             using var timeout = Timeout(context, 180);
             var draft = await workflow.DraftQuizAsync(id, owner, null, timeout.Token);
-            return Redirect($"/presenter/drafts/{draft.Id}");
+            return ActionRedirect($"/presenter/drafts/{draft.Id}");
         }
-        catch (DomainException) { return Redirect($"/presenter/lessons/{id}?error=review"); }
-        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested) { return Redirect($"/presenter/lessons/{id}?error=service"); }
+        catch (DomainException error)
+        {
+            var needsReview = error.Code is "lesson_not_ready" or "not_found" or "quiz_rejected";
+            return ActionRedirect($"/presenter/lessons/{id}?error={(needsReview ? "review" : "service")}",
+                needsReview
+                    ? "The quiz could not pass its checks or the lesson is unavailable for quiz creation. Read the lesson review before trying again."
+                    : "The quiz draft could not be completed. Your lesson is still available. Try again in a moment.", needsReview ? 422 : 503);
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested) { return ActionRedirect($"/presenter/lessons/{id}?error=service",
+            "The quiz request timed out. Completion could not be confirmed. Your lesson is still available. No request has been repeated.", 503); }
     }
 
     private static async Task<IResult> Publish(string id, HttpContext context, PresenterAccess presenter,
@@ -170,11 +182,18 @@ public static class LessonEndpoints
     }
 
     private static DomainException InvalidForm() => new("invalid_form", "Check the values in the application form.");
-    private static IResult Redirect(string path) => new SeeOther(path);
-    private sealed class SeeOther(string path) : IResult
+    private static IResult Redirect(string path) => new SeeOther(path, null, 400, false);
+    private static IResult ActionRedirect(string path, string? message = null, int errorStatus = 400) => new SeeOther(path, message, errorStatus, true);
+    private sealed class SeeOther(string path, string? message, int errorStatus, bool enhanced) : IResult
     {
         public Task ExecuteAsync(HttpContext httpContext)
         {
+            if (enhanced && httpContext.Request.Headers["X-Lumero-Action"] == "fetch")
+            {
+                httpContext.Response.StatusCode = message is null ? StatusCodes.Status200OK : errorStatus;
+                return httpContext.Response.WriteAsJsonAsync(new { location = message is null ? path : null, message },
+                    httpContext.RequestAborted);
+            }
             httpContext.Response.StatusCode = StatusCodes.Status303SeeOther;
             httpContext.Response.Headers.Location = path;
             return Task.CompletedTask;

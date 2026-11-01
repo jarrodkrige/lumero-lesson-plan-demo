@@ -112,6 +112,10 @@ These cases exercise the Production-only fixed HTTPS scheme, exact canonical Hos
 
 Nested presenter and participant pages are checked against the real static asset host. Their stylesheet URLs are root-relative, so the strict `base-uri 'none'` policy remains in place without a blocked `<base>` element. The isolated probe tests use no real credentials or network calls.
 
+Lesson generation, quiz drafting and lesson downloads progressively enhance the native presenter controls with a same-origin external script. The presenter CSP permits self-hosted scripts and continues to block inline scripts. Public pages retain `script-src 'none'`. Without JavaScript, the native form and document routes remain available. Enhanced form requests retain antiforgery and return only a confirmed saved-resource location or explicit error feedback. Pending feedback describes the workflow without claiming a live stage or showing model reasoning.
+
+The browser sequence holds each request to check visible pending feedback and duplicate-click prevention. It also injects a local download HTTP 429 with `Retry-After`, checks the cooldown and manual retry, and injects HTTP 503 to check uncertain-outcome feedback. Inputs and the current lesson remain on the page after enhanced request failures. No automatic request retry is performed.
+
 Fresh storage clients and Web/key-provider instances test persistence across application replacement. Those tests must not be described as an Azurite process restart or an Azure disaster-recovery test.
 
 ## Browser harness
@@ -138,7 +142,7 @@ The script accepts only an explicit loopback origin, requires the exact local-ve
 
 The sequence checks lesson generation, sources/review, an actual DOCX download, exactly five private questions, anonymous 404 before publication, unchecked required approval, real MCP publication, stable canonical URL and local QR decoding. It then uses an anonymous JavaScript-disabled mobile context to check required answers, the absence of private marking data and identity fields before submission, server grading, explanations after submission and durable result refresh. Keyboard skip navigation, labels, layout bounds, safe generated-text rendering and browser resource failures are also checked.
 
-A successful run reports **40 checks**, creates **nine screenshots**, saves the DOCX and PNG QR, and writes `browser-verification.json`. The report records the source commit, tracked-change state, actual package/browser versions, check outcomes and SHA-256 hashes of the captured assets. Asset timestamps and unpredictable IDs change between runs; verify the recorded hashes rather than expecting byte-identical screenshots.
+A successful run captures screenshots of the flow and pending feedback, saves the DOCX and PNG QR, and writes `browser-verification.json`. The report records the source commit, tracked-change state, actual package/browser versions, check outcomes and SHA-256 hashes of the captured assets. Asset timestamps and unpredictable IDs change between runs; verify the recorded hashes rather than expecting byte-identical screenshots.
 
 Keep captures and test output in ignored `.local` state or an external evidence directory. Every capture is synthetic verification. A loopback QR cannot be used by pupils on another device. These automated checks do not constitute a comprehensive accessibility audit or live model evaluation.
 

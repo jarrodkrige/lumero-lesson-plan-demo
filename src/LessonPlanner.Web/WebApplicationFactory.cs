@@ -71,10 +71,15 @@ public static class WebApplicationFactory
                 { PermitLimit = 6, Window = TimeSpan.FromMinutes(10), QueueLimit = 0 }));
             options.OnRejected = async (rejection, cancellationToken) =>
             {
-                var seconds = rejection.Lease.TryGetMetadata(MetadataName.RetryAfter, out var delay)
-                    ? Math.Max(1, (int)Math.Ceiling(delay.TotalSeconds)) : 1;
-                rejection.HttpContext.Response.Headers.RetryAfter = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                await rejection.HttpContext.Response.WriteAsync("The current request limit has been reached. Please wait before trying again.", cancellationToken);
+                var message = "The current request limit has been reached. Wait a moment before trying again.";
+                if (rejection.Lease.TryGetMetadata(MetadataName.RetryAfter, out var delay))
+                {
+                    var seconds = Math.Max(1, (int)Math.Ceiling(delay.TotalSeconds));
+                    rejection.HttpContext.Response.Headers.RetryAfter = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    message = $"The current request limit has been reached. Try again in {seconds} seconds.";
+                }
+                rejection.HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+                await rejection.HttpContext.Response.WriteAsync(message, cancellationToken);
             };
         });
     }
@@ -90,7 +95,8 @@ public static class WebApplicationFactory
             context.Response.Headers.Pragma = "no-cache";
             context.Response.Headers.XContentTypeOptions = "nosniff";
             context.Response.Headers["Referrer-Policy"] = "no-referrer";
-            context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+            var scriptSource = context.Request.Path.StartsWithSegments("/presenter") ? "'self'" : "'none'";
+            context.Response.Headers["Content-Security-Policy"] = $"default-src 'self'; script-src {scriptSource}; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
             context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
             context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive";
             try { await next(context); }

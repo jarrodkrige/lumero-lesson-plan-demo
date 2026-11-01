@@ -5,7 +5,10 @@
 @inject ILessonStore LessonStore
 
 <PageTitle>@(_record?.Lesson?.Title ?? "Lesson") | Agent demo</PageTitle>
-<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+    <script src="/@Assets["presenter-actions.js"]" defer></script>
+</HeadContent>
 
 @if (_record is null)
 {
@@ -28,10 +31,17 @@ else
         <div class="heading-actions">
             @if (IsReady)
             {
-                <a class="button button-secondary" href="@($"/presenter/lessons/{RouteId(Id)}/document")">Download lesson</a>
-                <form method="post" action="@($"/presenter/lessons/{RouteId(Id)}/quiz")">
+                <div data-presenter-download data-pending-label="Preparing lesson..."
+                     data-pending-message="Preparing your lesson document. Keep this page open until it is ready.">
+                    <a class="button button-secondary" href="@($"/presenter/lessons/{RouteId(Id)}/document")">Download lesson</a>
+                    <ActionFeedback />
+                </div>
+                <form method="post" action="@($"/presenter/lessons/{RouteId(Id)}/quiz")" data-presenter-action
+                      data-pending-label="Creating quiz..."
+                      data-pending-message="Creating five questions from your accepted lesson, then checking and independently reviewing the answers. This can take a few minutes. Keep this page open.">
                     <AntiforgeryToken />
                     <button class="button" type="submit">Create quiz</button>
+                    <ActionFeedback />
                 </form>
             }
             else
@@ -126,6 +136,7 @@ else
     {
         "quiz" or "service" => "The quiz draft could not be completed. Your lesson is still available. Try creating the quiz again in a moment.",
         "busy" => "The quiz service is busy. Wait a moment before creating another draft.",
+        "review" => "The quiz could not pass its checks or the lesson is unavailable for quiz creation. Read the lesson review before trying again.",
         _ => null
     };
 

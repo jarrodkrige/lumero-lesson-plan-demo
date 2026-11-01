@@ -140,6 +140,30 @@ public sealed class WebBoundaryFlowTests(LocalTableFixture storage)
     }
 
     [Fact]
+    public async Task Presenter_feedback_script_is_rooted_and_allowed_by_csp_only_on_action_pages()
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        var lesson = TestData.Lesson();
+        await storage.Store().SaveAsync(lesson, CancellationToken.None);
+        using var presenter = host.Client();
+        await host.SignInAsync(presenter);
+        foreach (var path in new[] { "/presenter", $"/presenter/lessons/{lesson.Id}" })
+        {
+            using var page = await presenter.GetAsync(path);
+            Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+            Assert.Contains("script-src 'self';", page.Headers.GetValues("Content-Security-Policy").Single());
+            var html = await page.Content.ReadAsStringAsync();
+            var script = System.Text.RegularExpressions.Regex.Match(html, "src=\"(?<path>/[^\"]+\\.js)\"");
+            Assert.True(script.Success);
+            using var asset = await presenter.GetAsync(script.Groups["path"].Value);
+            Assert.Equal(HttpStatusCode.OK, asset.StatusCode);
+            Assert.Contains("X-Lumero-Action", await asset.Content.ReadAsStringAsync());
+            Assert.Contains("data-action-feedback", html);
+            Assert.Contains("aria-live=\"polite\"", html);
+        }
+    }
+
+    [Fact]
     public async Task Generation_failure_has_no_sensitive_exception_or_assumed_success_in_the_response()
     {
         await using var host = await WebTestHost.StartAsync(storage, configureTestServices: services =>

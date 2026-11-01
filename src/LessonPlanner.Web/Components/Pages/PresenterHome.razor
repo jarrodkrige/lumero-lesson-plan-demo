@@ -3,7 +3,10 @@
 @inject PresenterAccess Presenter
 
 <PageTitle>Plan a lesson | Agent demo</PageTitle>
-<HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+    <script src="/@Assets["presenter-actions.js"]" defer></script>
+</HeadContent>
 
 <div class="request-workspace">
     <header class="page-heading">
@@ -16,7 +19,9 @@
 
     <PageNotice Message="@ErrorMessage" />
 
-    <form class="paper request-form" method="post" action="/presenter/lessons" aria-label="Lesson request">
+    <form class="paper request-form" method="post" action="/presenter/lessons" aria-label="Lesson request" data-presenter-action
+          data-pending-label="Creating lesson..."
+          data-pending-message="Creating your lesson plan. The application plans the request, retrieves curriculum evidence, writes the lesson and reviews it. This can take a few minutes. Keep this page open.">
         <AntiforgeryToken />
         <div class="form-field">
             <label for="topic">Topic</label>
@@ -43,6 +48,7 @@
         </div>
         <div class="form-actions">
             <button class="button" type="submit">Create lesson</button>
+            <ActionFeedback />
         </div>
     </form>
 </div>

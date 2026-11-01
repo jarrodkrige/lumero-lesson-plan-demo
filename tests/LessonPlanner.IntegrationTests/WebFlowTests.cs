@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using LessonPlanner.Core;
+using LessonPlanner.Web.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LessonPlanner.IntegrationTests;
@@ -21,6 +22,7 @@ public sealed class WebFlowTests(LocalTableFixture storage)
 
         var publication = HtmlForms.Fields(draftHtml, $"/presenter/drafts/{draftId}/publish");
         publication["acknowledged"] = "yes";
+        presenter.DefaultRequestHeaders.Add("X-Lumero-Action", "fetch");
         using var published = await presenter.PostAsync($"/presenter/drafts/{draftId}/publish", new FormUrlEncodedContent(publication));
         Assert.Equal(HttpStatusCode.SeeOther, published.StatusCode);
         Assert.Equal($"/presenter/drafts/{draftId}", published.Headers.Location?.OriginalString);
@@ -39,6 +41,7 @@ public sealed class WebFlowTests(LocalTableFixture storage)
         Assert.DoesNotContain("private marking explanation", quizHtml, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("CorrectOptionId", quizHtml, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<script", quizHtml, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("script-src 'none';", quiz.Headers.GetValues("Content-Security-Policy").Single());
         Assert.DoesNotContain("_framework/blazor", quizHtml, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(5, Regex.Matches(quizHtml, "<fieldset\\b", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)).Count);
         var answers = HtmlForms.Fields(quizHtml, $"/quiz/{draftId}/submit");
@@ -133,6 +136,66 @@ public sealed class WebFlowTests(LocalTableFixture storage)
         Assert.Equal(0, host.Services.GetRequiredService<LocalVerificationCounters>().TransportCalls);
         var approval = await storage.Table.GetEntityIfExistsAsync<Azure.Data.Tables.TableEntity>($"quiz-{draftId}", "approval");
         Assert.False(approval.HasValue);
+    }
+
+    [Fact]
+    public async Task Enhanced_actions_return_confirmed_locations_and_keep_antiforgery()
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        using var client = host.Client();
+        await host.SignInAsync(client);
+        client.DefaultRequestHeaders.Add("X-Lumero-Action", "fetch");
+        var form = HtmlForms.Fields(await client.GetStringAsync("/presenter"), "/presenter/lessons");
+        form["Topic"] = "Sorting algorithms";
+        form["EducationalLevel"] = "GCSE (OCR J277)";
+        form["DurationMinutes"] = "30";
+        form["Instructions"] = "";
+        using var generated = await client.PostAsync("/presenter/lessons", new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.OK, generated.StatusCode);
+        using var result = System.Text.Json.JsonDocument.Parse(await generated.Content.ReadAsStringAsync());
+        var lessonPath = result.RootElement.GetProperty("location").GetString()!;
+        Assert.Matches("^/presenter/lessons/[a-f0-9]{48}$", lessonPath);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, result.RootElement.GetProperty("message").ValueKind);
+        var lessonId = lessonPath.Split('/').Last();
+        var quizForm = HtmlForms.Fields(await client.GetStringAsync(lessonPath), $"{lessonPath}/quiz");
+        using var drafted = await client.PostAsync($"{lessonPath}/quiz", new FormUrlEncodedContent(quizForm));
+        Assert.Equal(HttpStatusCode.OK, drafted.StatusCode);
+        using var quiz = System.Text.Json.JsonDocument.Parse(await drafted.Content.ReadAsStringAsync());
+        var quizPath = quiz.RootElement.GetProperty("location").GetString()!;
+        Assert.Matches("^/presenter/drafts/[a-f0-9]{48}$", quizPath);
+        Assert.NotNull(await storage.Store().FindDraftAsync(quizPath.Split('/').Last(), TestData.Presenter, CancellationToken.None));
+        using var unverified = await client.PostAsync($"{lessonPath}/quiz", new FormUrlEncodedContent(new Dictionary<string, string>()));
+        Assert.Equal(HttpStatusCode.BadRequest, unverified.StatusCode);
+        Assert.NotNull(await storage.Store().FindAsync(lessonId, TestData.Presenter, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Enhanced_actions_report_busy_and_validation_without_starting_work()
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        using var client = host.Client();
+        await host.SignInAsync(client);
+        client.DefaultRequestHeaders.Add("X-Lumero-Action", "fetch");
+        var form = HtmlForms.Fields(await client.GetStringAsync("/presenter"), "/presenter/lessons");
+        form["Topic"] = "Sorting algorithms";
+        form["EducationalLevel"] = "GCSE (OCR J277)";
+        form["DurationMinutes"] = "30";
+        using (host.Services.GetRequiredService<ModelWorkGate>().TryEnter(TestData.Presenter))
+        {
+            foreach (var path in new[] { "/presenter/lessons", $"/presenter/lessons/{DomainRules.NewId()}/quiz" })
+            {
+                using var busy = await client.PostAsync(path, new FormUrlEncodedContent(form));
+                Assert.Equal(HttpStatusCode.Conflict, busy.StatusCode);
+                using var body = System.Text.Json.JsonDocument.Parse(await busy.Content.ReadAsStringAsync());
+                Assert.Equal(System.Text.Json.JsonValueKind.Null, body.RootElement.GetProperty("location").ValueKind);
+                Assert.Contains("Wait a moment", body.RootElement.GetProperty("message").GetString());
+            }
+        }
+        form["DurationMinutes"] = "invalid";
+        using var invalid = await client.PostAsync("/presenter/lessons", new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, invalid.StatusCode);
+        Assert.Contains("Check the topic", await invalid.Content.ReadAsStringAsync());
+        Assert.Equal(0, host.Services.GetRequiredService<LocalVerificationCounters>().TransportCalls);
     }
 
     [Theory]

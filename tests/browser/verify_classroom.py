@@ -72,6 +72,7 @@ class Verification:
         self.page_errors = []
         self.resource_failures = []
         self.http_errors = []
+        self.expected_http_errors = []
         self.report = {
             "scope": "Synthetic local verification only. Real local MCP, JWT validation, Tables, DOCX, QR and grading.",
             "not_verified": ["Live Entra sign-in", "Foundry inference", "Service-managed agent registration", "Azure deployment", "External phone reachability", "Comprehensive accessibility audit"],
@@ -134,7 +135,11 @@ class Verification:
 
         def response_error(response):
             if response.status >= 400:
-                self.http_errors.append({"status": response.status, "route": self.safe_route(response.url)})
+                error = {"status": response.status, "route": self.safe_route(response.url)}
+                if error in self.expected_http_errors:
+                    self.expected_http_errors.remove(error)
+                else:
+                    self.http_errors.append(error)
 
         def failed(request):
             if request.url.endswith("/document") and request.failure == "net::ERR_ABORTED":
@@ -269,7 +274,7 @@ class Verification:
             source_link = page.locator('.source-links a[href^="#source-"]').first
             self.check("Compact citation has a numbered label and full accessible title", source_link.inner_text() == "Source 1" and source_link.get_attribute("aria-label") == f"Source 1: {SOURCE_TITLE}")
             target_id = unquote(source_link.get_attribute("href")[1:])
-            self.check("Source disclosure starts closed with application JavaScript disabled", page.locator("details.sources").get_attribute("open") is None and page.locator("script").count() == 0)
+            self.check("Source disclosure starts closed with application JavaScript disabled", page.locator("details.sources").get_attribute("open") is None and page.locator("script:not([src])").count() == 0)
             source_link.focus()
             page.keyboard.press("Enter")
             target = page.locator(f'[id="{target_id}"]')
@@ -279,6 +284,65 @@ class Verification:
             self.screenshot(page, "10-source-fragment-mobile.png")
         finally:
             context.close()
+    def hold_action(self, page, control, pattern, pending):
+        control = page.locator("[data-presenter-download] > a" if pattern.endswith("/document")
+            else 'form[data-presenter-action] button[type="submit"]')
+        held = []
+        page.route(pattern, lambda route: held.append(route))
+        control.click()
+        expect(page.get_by_text(pending, exact=False)).to_be_visible()
+        expect(control).to_have_attribute("aria-disabled", "true")
+        if control.evaluate("element => element.tagName") == "BUTTON":
+            control.evaluate("element => element.form.requestSubmit()")
+        else:
+            control.click(force=True)
+        self.check("Repeated in-flight action is blocked: " + pending, len(held) == 1)
+        action = "document" if pattern.endswith("/document") else "quiz" if pattern.endswith("/quiz") else "lesson"
+        self.responsive_capture(page, f"pending-{action}", f"Pending {action} feedback")
+        return held[0]
+
+    def rejected_download(self, page):
+        control = page.locator("[data-presenter-download] > a")
+        pattern = "**/presenter/lessons/*/document"
+        held = []
+        page.route(pattern, lambda route: held.append(route))
+        control.click()
+        expect(control).to_have_attribute("aria-disabled", "true")
+        self.expected_http_errors.append({"status": 429, "route": self.safe_route(held[0].request.url)})
+        held[0].fulfill(status=429, headers={"Retry-After": "2", "Content-Type": "text/plain"}, body="Request limit")
+        feedback = page.locator("[data-presenter-download] [data-action-feedback]")
+        expect(feedback).to_contain_text("current request limit")
+        expect(control).to_have_attribute("aria-disabled", "true")
+        control.click(force=True)
+        self.check("Rate-limit cooldown blocks repeat download", len(held) == 1)
+        expect(feedback).to_contain_text("You can try again now")
+        expect(control).to_have_attribute("aria-disabled", "false")
+        self.check("Cooldown never automatically retries", len(held) == 1)
+        control.click()
+        expect(control).to_have_attribute("aria-disabled", "true")
+        self.expected_http_errors.append({"status": 503, "route": self.safe_route(held[1].request.url)})
+        held[1].fulfill(status=503, headers={"Content-Type": "text/plain"}, body="Synthetic service failure")
+        expect(feedback).to_contain_text("Completion could not be confirmed")
+        expect(control).to_have_attribute("aria-disabled", "false")
+        self.check("Download failure remains on lesson with explicit feedback", "/presenter/lessons/" in page.url)
+        page.unroute(pattern)
+
+    def rejected_form(self, page, selector, pattern, status, message):
+        form = page.locator(selector)
+        control = form.locator('button[type="submit"]')
+        before = form.evaluate("form => Array.from(new FormData(form)).filter(([key]) => key !== '__RequestVerificationToken')")
+        held = []
+        page.route(pattern, lambda route: held.append(route))
+        control.click()
+        expect(control).to_be_disabled()
+        self.expected_http_errors.append({"status": status, "route": self.safe_route(held[0].request.url)})
+        held[0].fulfill(status=status, headers={"Content-Type": "application/json"},
+            body=json.dumps({"location": None, "message": message}))
+        expect(form.locator("[data-action-feedback]")).to_have_text(message)
+        expect(control).to_be_enabled()
+        self.check("Failed form preserves input and permits manual retry", before ==
+            form.evaluate("form => Array.from(new FormData(form)).filter(([key]) => key !== '__RequestVerificationToken')") and len(held) == 1)
+        page.unroute(pattern)
 
     def run(self):
         with sync_playwright() as playwright:
@@ -321,8 +385,18 @@ class Verification:
                 self.screenshot(page, "08-presenter-mobile.png")
                 page.set_viewport_size({"width": 1440, "height": 1000})
 
-                self.phase = "native lesson generation"
-                self.native_navigation(page, page.get_by_role("button", name="Create lesson", exact=True), r"/presenter/lessons/[a-f0-9]{48}$")
+                self.rejected_form(page, "form[data-presenter-action]", "**/presenter/lessons", 429,
+                    "The current request limit has been reached. Wait a moment, then try again.")
+                self.rejected_form(page, "form[data-presenter-action]", "**/presenter/lessons", 422,
+                    "Check the topic, educational level and lesson length, then try again.")
+                self.phase = "lesson generation feedback"
+                lesson_route = self.hold_action(page, page.get_by_role("button", name="Create lesson", exact=True),
+                    "**/presenter/lessons", "Creating your lesson plan.")
+                self.check("Lesson fetch retains the native antiforgery field", "__RequestVerificationToken" in lesson_route.request.post_data)
+                with page.expect_navigation(wait_until="networkidle"):
+                    lesson_route.continue_()
+                page.unroute("**/presenter/lessons")
+                expect(page).to_have_url(re.compile(r"/presenter/lessons/[a-f0-9]{48}$"))
                 lesson_path = urlsplit(page.url).path
                 self.presentation(page, "Generated lesson")
                 self.check("Generated lesson is explicitly local verification", "Local verification:" in page.get_by_role("heading", level=1).inner_text())
@@ -332,9 +406,14 @@ class Verification:
                 self.responsive_capture(page, "02-lesson", "Lesson")
                 self.lesson_disclosures(page)
                 self.source_fragment_without_javascript(browser, lesson_path)
+                self.rejected_download(page)
                 self.phase = "lesson document download"
+                document_route = self.hold_action(page, page.get_by_role("link", name="Download lesson", exact=True),
+                    "**/presenter/lessons/*/document", "Preparing your lesson document.")
                 with page.expect_download() as download_event:
-                    page.get_by_role("link", name="Download lesson", exact=True).click()
+                    document_route.continue_()
+                page.unroute("**/presenter/lessons/*/document")
+                expect(page.get_by_text("The download has been handed to your browser.", exact=False)).to_be_visible()
                 document = self.asset("lesson-local-verification.docx")
                 download_event.value.save_as(str(document))
                 with zipfile.ZipFile(document) as package:
@@ -348,7 +427,14 @@ class Verification:
                     self.check("Downloaded DOCX uses generic creator metadata without visible legacy branding", creator is not None and creator.text == "Agent demo" and re.search(r"\blumero\b", document_text + " ".join(properties.itertext()), re.IGNORECASE) is None)
                     self.check("Downloaded lesson retains teaching material and complete source provenance", all(text in document_text for text in [*ACTIVITY_TEXT, *TEACHING_TEXT, SOURCE_TITLE, SOURCE_EXTRACT, SOURCE_URL, hashlib.sha256(SOURCE_EXTRACT.encode()).hexdigest(), "2026-10-30 12:00:00 UTC"]))
                 self.phase = "native reviewed quiz drafting"
-                self.native_navigation(page, page.get_by_role("button", name="Create quiz", exact=True), r"/presenter/drafts/[a-f0-9]{48}$")
+                self.rejected_form(page, "form[data-presenter-action]", "**/presenter/lessons/*/quiz", 409,
+                    "The quiz service is busy. Wait a moment before trying again.")
+                quiz_route = self.hold_action(page, page.get_by_role("button", name="Create quiz", exact=True),
+                    "**/presenter/lessons/*/quiz", "Creating five questions from your accepted lesson")
+                with page.expect_navigation(wait_until="networkidle"):
+                    quiz_route.continue_()
+                page.unroute("**/presenter/lessons/*/quiz")
+                expect(page).to_have_url(re.compile(r"/presenter/drafts/[a-f0-9]{48}$"))
                 draft_path = urlsplit(page.url).path
                 quiz_id = draft_path.rsplit("/", 1)[1]
                 quiz_url = self.base + "/quiz/" + quiz_id
@@ -433,9 +519,9 @@ class Verification:
                 page.get_by_label("Educational level", exact=True).select_option(label="GCSE (OCR J277)")
                 page.get_by_label("Duration in minutes", exact=True).fill("60")
                 self.native_navigation(page, page.get_by_role("button", name="Create lesson", exact=True), r"/presenter/lessons/[a-f0-9]{48}$")
-                self.check("Generated markup is rendered as text without executable nodes", hostile_text in page.get_by_role("heading", level=1).inner_text() and page.locator("script").count() == 0 and page.evaluate("typeof window.__agent_demo_test === 'undefined'"))
+                self.check("Generated markup is rendered as text without executable nodes", hostile_text in page.get_by_role("heading", level=1).inner_text() and page.locator("script:not([src])").count() == 0 and page.locator("script[src]").count() == 1 and page.evaluate("typeof window.__agent_demo_test === 'undefined'"))
                 self.check("Browser made no external requests", not self.external_requests)
-                self.check("Rendered flow has no page errors or failed resources", not self.page_errors and not self.resource_failures and not self.http_errors)
+                self.check("Rendered flow has no page errors or failed resources", not self.page_errors and not self.resource_failures and not self.http_errors and not self.expected_http_errors)
                 presenter.close()
                 anonymous.close()
             finally:
