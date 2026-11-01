@@ -16,6 +16,29 @@ Its evidence entries identify nineteen retained files by relative name, byte len
 
 Use the commands below against that code revision to reproduce the checks. New runtime identifiers and timestamps produce different capture hashes. The recorded QR belongs to a stopped loopback harness and is not the workshop's public quiz URL. The owned harness and emulator were stopped after verification.
 
+## Recorded live acceptance
+
+On 1 November 2026, [protected run 41323236587](https://github.com/jarrodkrige/lumero-lesson-plan-demo/actions/runs/41323236587) deployed application source `33e9f3d6066b6e130b873800f79490591341fc12`. Its source-bound CI passed 361 unit, 29 isolated probe and 122 selected HTTP integration cases, plus 68 CI helper cases. Independent post-release checks verified the new image digests and HTTP boundaries. Later documentation amendments do not change that deployed source or the historical local checkpoint above.
+
+The approved live sequence established:
+
+- Personal Entra sign-in and access to the protected presenter page on the corrected confidential-client configuration. Authentication values were not inspected or exported.
+- One genuine application-hosted lesson generation for OCR J277 sorting. The actual sixty-minute plan, source provenance, three algorithm descriptions and assessment prompts were reviewed against specification section 2.1.3. The downloaded DOCX package and its extracted text were verified.
+- One reviewed draft with exactly five MCQs. Every key and explanation was independently checked, including the complete first bubble-sort pass on `[5, 2, 8, 1]`, yielding `[2, 5, 1, 8]`. The actual draft identifier returned anonymous 404 before publication and its private page required sign-in.
+- One presenter-approved publication through the deployed official MCP path. A later protected-page read confirmed publication. The genuine downloaded QR decoded to the exact canonical HTTPS pupil URL, which the anonymous participant route served successfully.
+- One submission in a fresh unauthenticated browser context, deliberately answering three correctly and two incorrectly. The server returned 3/5 and correct feedback for all questions. The initial quiz view exposed no marking keys. A second fresh context retrieved the identical saved result through its private capability link, consistent with the displayed anyone-with-link warning.
+
+### Content and evidence limitations
+
+- All five correct answers occupied the first option. Marking was correct; answer positions were predictable. Several distractors were easy. This was an introductory formative demonstration, not a validated high-stakes assessment.
+- The lesson supplies a teaching sequence and activity instructions. Teachers still need to prepare the trace tables, worksheets, algorithm summaries and code segment it references. It does not contain completed worked trace tables or a ready-made pupil worksheet pack.
+- The output retains em dashes, a verbal "practice" requiring British-English "practise", and an OCR excerpt truncated at both ends. The full source URL and downloaded-payload hash remain available. Sorting-efficiency statements are introductory generalisations, not universal performance guarantees or a requirement to memorise formal complexity notation for section 2.1.3.
+- Production warning-level logs did not provide a complete successful callback/generation/publication request audit. Accepted sign-in combines actual protected access with verified configuration and confidential-code-redemption regression tests. No actual client assertion or token-endpoint payload was captured. Publication evidence combines the verified source/configuration with the normal presenter action and subsequent durable application read paths; no direct Table-row export or successful MCP packet trace was retained.
+- Shared model-deployment metrics cannot establish this attempt's exact provider-call count, tokens or bill. UI actions and role activity events are not provider request counts.
+- The fresh-context result read does not prove production cold-restart recovery, replay/idempotency or load behaviour. Those scopes retain their separately described local tests. Independent teacher-device/network participation and a physical-device QR scan were not performed. Service-managed Foundry hosting was not used or established.
+
+The real DOCX, reviewed lesson/quiz text, safe screenshots, QR, exact action times and integrity manifest are retained in the private acceptance evidence. The result capability URL, authentication values and environment-specific identifiers are not published here. Earlier rough timing notes are preserved with corrections from the exact UI timestamps; the private attempt record was written after the lesson click and is not represented as a pre-action receipt. The accepted publication expires on **2 November 2026 at 16:55 UTC**, at the precision displayed by the application. Do not assume that its saved link remains available after expiry. No further inference or publication was performed to address the recorded editorial observations.
+
 ## Prerequisites
 
 - .NET SDK selected by `global.json`.

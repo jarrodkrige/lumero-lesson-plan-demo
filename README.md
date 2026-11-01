@@ -2,9 +2,11 @@
 
 A .NET 10 reference application for a secondary computing teacher workshop. A presenter requests a lesson, examines its curriculum sources and review, downloads an editable Word document, then approves publication of a five-question quiz. Participants answer anonymously through server-rendered pages.
 
-**Verification status:** the historical synthetic checkpoint at `ea5e365` passed 361 application unit tests, 91 integration tests, 29 isolated hosting-probe tests and 40 browser checks, with a warning-free solution build. Local tests used actual Table persistence and authenticated official MCP transport with explicitly synthetic model and identity services. The subsequent 210-second Generate amendment passed thirteen dedicated cancellation/error-path cases; that focused result is not a fresh full-suite or browser checkpoint.
+**Verification status:** deployed application source `33e9f3d6066b6e130b873800f79490591341fc12` completed the recorded live acceptance on 1 November 2026. It covered personal Entra presenter sign-in, one genuine OCR J277 sorting lesson, its actual DOCX, a reviewed five-question draft, presenter-approved MCP publication, the canonical pupil link and decoded QR, and an anonymous submission correctly marked 3/5. The source-bound protected CI passed 512 .NET cases and 68 CI helper cases. See [recorded live acceptance](docs/local-verification.md#recorded-live-acceptance) for evidence boundaries and content-quality limitations.
 
-Live application Entra sign-in, Foundry inference, service-managed registration, Azure deployment and external-device access remain unverified. Cloud execution requires explicit operational approval and technical validation. There is no production model fallback or authentication bypass.
+**Historical local checkpoint:** `ea5e365` passed 361 application unit tests, 91 integration tests, 29 isolated hosting-probe tests and 40 browser checks, with a warning-free solution build. Local tests used actual Table persistence and authenticated official MCP transport with explicitly synthetic model and identity services. The subsequent 210-second Generate amendment passed thirteen dedicated cancellation/error-path cases; that focused result is not a fresh full-suite or browser checkpoint. These historical synthetic captures remain distinct from the later live acceptance.
+
+Independent teacher-device/network access, production restart/replay/load behaviour and service-managed Foundry hosting were not established by the live acceptance. Further cloud execution requires explicit operational approval and technical validation. There is no production model fallback or authentication bypass.
 
 ## Application boundary
 
@@ -57,7 +59,7 @@ Both containers use port `8080`. MCP is available at `/mcp`; health endpoints ar
 
 The [reproducible checkpoint manifest](docs/checkpoint-manifest.json) records the verified code revision, dependency locks, exact commands, measured results and SHA-256 hashes for the retained workshop evidence. Synthetic runtime captures and raw test output are kept outside the public repository.
 
-The implemented inference path is **application-hosted** and has not been invoked against a live model. `AsAIAgent` does not register a service-managed Foundry agent. The [isolated hosting probe](probes/LessonPlanner.FoundryHostProbe/README.md) compiles the pinned builder-level Foundry Responses v2.0 API. Its default `--check` execution makes no network call. Actual hosting, model invocation and service compatibility remain subject to explicit Azure approval.
+The implemented **application-hosted** inference path was used for the recorded live acceptance. `AsAIAgent` does not register a service-managed Foundry agent. The [isolated hosting probe](probes/LessonPlanner.FoundryHostProbe/README.md) compiles the pinned builder-level Foundry Responses v2.0 API. Its default `--check` execution makes no network call. Service-managed registration, hosting and model invocation through that separate probe remain unverified and require their own explicit Azure approval.
 
 ## Workshop code
 
