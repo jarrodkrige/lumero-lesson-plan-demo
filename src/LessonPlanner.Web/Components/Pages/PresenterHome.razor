@@ -76,6 +76,7 @@
     private string? ErrorMessage => Error switch
     {
         "validation" => "Check the topic, educational level and lesson length. Keep the topic within 120 characters and teaching instructions within 1,000 characters, then try again.",
+        "sorting" => "Use one example list with two to eight whole numbers separated by commas or 'and'.",
         "service" => "The lesson request could not be completed. Try again in a moment. If this continues, contact the person who manages your lesson workbench.",
         "busy" => "The lesson service is busy. Wait a moment before sending another request.",
         _ => null

@@ -45,6 +45,8 @@ public static class LessonEndpoints
             var lesson = await workflow.GenerateAsync(request, owner, null, timeout.Token);
             return ActionRedirect($"/presenter/lessons/{lesson.Id}");
         }
+        catch (DomainException error) when (error.Code == "sorting_example") { return ActionRedirect("/presenter?error=sorting",
+            "Use one example list with two to eight whole numbers separated by commas or 'and'.", 422); }
         catch (DomainException) { return ActionRedirect("/presenter?error=validation",
             "Check the topic, educational level and lesson length, then try again.", 422); }
         catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested) { return ActionRedirect("/presenter?error=service",

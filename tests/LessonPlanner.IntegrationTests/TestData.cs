@@ -38,6 +38,20 @@ internal static class TestData
         return draft with { PayloadHash = DomainRules.DraftHash(draft) };
     }
 
+    public static LessonRecord LessonWithOakSources()
+    {
+        var lesson = Lesson();
+        var references = SortingTeachingSources.All.Select(source => new SourceReference(source.Id, source.Title,
+            source.Url, DateTimeOffset.UtcNow, new string('b', 64), "Synthetic source extract for local tests."));
+        return lesson with { Lesson = lesson.Lesson! with { Sources = [.. Sources, .. references] } };
+    }
+
+    public static QuizDraft DraftWithLessonSources(LessonRecord lesson)
+    {
+        var draft = Draft(lesson) with { Sources = lesson.Lesson!.Sources };
+        return draft with { PayloadHash = DomainRules.DraftHash(draft) };
+    }
+
     public static QuizAttempt Attempt(QuizDraft draft, string option = "a") => new(DomainRules.NewId(), draft.Id,
         draft.Content.Questions.Select(q => new QuizAnswer(q.Id, option)).ToImmutableArray());
 

@@ -41,6 +41,11 @@ internal static class AgentInstructions
         and assessment (5-700). The activity durations must sum exactly to the requested durationMinutes.
         Each objective must cite one or more supplied source IDs. Do not return a sources property.
         The application attaches the original retrieved provenance. You cannot accept your own lesson.
+        When applicationCalculatedExamples are supplied, include a complete worked trace for each of the
+        three supplied examples, verify every step and label each trace as application-calculated.
+        Use source IDs for the supported procedures, not as claims that the calculated numbers or traces
+        were quoted from a source.
+        Preserve the teacher's supplied example list and teaching instructions.
         """;
 
     internal const string Reviewer = """
@@ -53,6 +58,12 @@ internal static class AgentInstructions
         For a quiz, check exactly five distinct MCQs, each with four plausible and distinct options,
         exactly one correct option, accurate explanation and valid citations. Check every answer key
         independently against the lesson and evidence. Reject ambiguity, unsupported answers or repetition.
+        Independently calculate numerical answers derived from application-calculated lesson examples.
+        Treat the source citations as support for the procedures, and retain accurate example provenance.
+        When applicationCalculatedExamples are supplied, independently check that the lesson includes
+        a complete, correctly labelled worked trace for each of the three supplied examples. Their presence
+        does not establish that the candidate is accurate or that the source contains those examples.
+        Reject incorrect traces, misleading provenance and unsupported procedural claims.
         If any finding is revision or critical, accepted must be false. A rejected review must explain
         at least one actionable problem. Do not rewrite the candidate or make publication decisions.
         """;
@@ -65,6 +76,8 @@ internal static class AgentInstructions
         matching exactly one option, explanation (10-1000) and non-empty sourceIds from the supplied lesson.
         Question and option identifiers must start with an ASCII letter or digit and contain only ASCII
         letters, digits, underscores or hyphens. Do not include links in any field.
+        When assessing an application-calculated lesson example, independently calculate the answer.
+        Label the example as application-calculated and cite the source supporting its procedure.
         The independent Reviewer and deterministic application validation decide whether this draft is saved.
         You cannot approve publication, supply hashes or decide the draft's identity, owner or version.
         """;

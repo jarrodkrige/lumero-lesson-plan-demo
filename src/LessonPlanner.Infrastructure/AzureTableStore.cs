@@ -172,7 +172,10 @@ public sealed class AzureTableStore(TableClient table, QuizPolicy policy, IGradi
         var draft = Read<QuizDraft>(draftRow);
         ValidateDraft(draft);
         return new(receipt.Id, receipt.Title, draft.Content.Questions.Select(q =>
-            new PublicQuestion(q.Id, q.Prompt, q.Options)).ToImmutableArray(), receipt.ExpiresAt);
+            new PublicQuestion(q.Id, q.Prompt, q.Options)).ToImmutableArray(), receipt.ExpiresAt)
+        {
+            AttributedSources = SortingTeachingSources.Attributions(draft.Sources)
+        };
     }
 
     public async Task<QuizResult> SubmitAsync(QuizAttempt attempt, CancellationToken cancellationToken)
@@ -203,7 +206,7 @@ public sealed class AzureTableStore(TableClient table, QuizPolicy policy, IGradi
             {
                 if (existing.GetString("AnswerHash") != attemptHash)
                     throw new DomainException("attempt_conflict", "This submission has already been recorded with different answers.");
-                return Read<QuizResult>(existing);
+                return ReadResult(existing);
             }
             var count = publication.GetInt32("SubmissionCount") ?? throw InvalidRecord();
             var maximum = publication.GetInt32("MaximumAttempts") ?? throw InvalidRecord();
@@ -211,6 +214,13 @@ public sealed class AzureTableStore(TableClient table, QuizPolicy policy, IGradi
             if (count >= maximum) throw new DomainException("quiz_full", "This quiz has reached its submission limit.");
             var attemptRow = Entity(partition, $"attempt-{attempt.Id}", result);
             attemptRow["AnswerHash"] = attemptHash;
+            var attributedSources = SortingTeachingSources.Attributions(draft.Sources);
+            if (!attributedSources.IsEmpty)
+            {
+                var ids = attributedSources.Select(source => source.Id).ToArray();
+                attemptRow["OakSourceIds"] = string.Join(",", ids);
+                attemptRow["OakSourceIdsHash"] = AttributionHash(result, ids);
+            }
             publication["SubmissionCount"] = checked(count + 1);
             try
             {
@@ -218,7 +228,7 @@ public sealed class AzureTableStore(TableClient table, QuizPolicy policy, IGradi
                     new(TableTransactionActionType.UpdateReplace, publication, publication.ETag),
                     new(TableTransactionActionType.Add, attemptRow)
                 ], cancellationToken);
-                return result;
+                return result with { AttributedSources = attributedSources };
             }
             catch (RequestFailedException e) when (e.Status is 409 or 412)
             {
@@ -236,8 +246,29 @@ public sealed class AzureTableStore(TableClient table, QuizPolicy policy, IGradi
         var publication = await GetAsync(partition, "publication", cancellationToken);
         if (publication is null || Read<PublishedQuiz>(publication).ExpiresAt <= clock.GetUtcNow()) return null;
         var result = await GetAsync(partition, $"attempt-{attemptId}", cancellationToken);
-        return result is null ? null : Read<QuizResult>(result);
+        return result is null ? null : ReadResult(result);
     }
+
+    private static QuizResult ReadResult(TableEntity row)
+    {
+        var result = Read<QuizResult>(row);
+        var hasIds = row.TryGetValue("OakSourceIds", out var value);
+        var hasHash = row.TryGetValue("OakSourceIdsHash", out var hash);
+        if (!hasIds && !hasHash) return result;
+        if (value is not string idsText || hash is not string storedHash) throw InvalidRecord();
+        var ids = idsText.Split(',');
+        if (ids.Length is < 1 or > 3 || ids.Distinct(StringComparer.Ordinal).Count() != ids.Length ||
+            ids.Any(id => !SortingTeachingSources.All.Any(source => source.Id == id)) ||
+            !string.Equals(storedHash, AttributionHash(result, ids), StringComparison.Ordinal))
+            throw InvalidRecord();
+        return result with
+        {
+            AttributedSources = ids.Select(id => SortingTeachingSources.All.Single(source => source.Id == id)).ToImmutableArray()
+        };
+    }
+
+    private static string AttributionHash(QuizResult result, string[] ids) =>
+        DomainRules.Hash(new { ResultHash = DomainRules.Hash(result), SourceIds = ids });
 
     private async Task AddImmutableAsync(TableEntity entity, CancellationToken cancellationToken)
     {

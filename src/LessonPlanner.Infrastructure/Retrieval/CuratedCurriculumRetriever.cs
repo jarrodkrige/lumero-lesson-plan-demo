@@ -41,15 +41,26 @@ public sealed class CuratedCurriculumRetriever : ICurriculumRetriever, IDisposab
         deadline.CancelAfter(options.TotalTimeout);
         try
         {
-            var payload = await DownloadAsync(entry, deadline.Token).ConfigureAwait(false);
+            byte[] payload;
+            try { payload = await DownloadAsync(entry, deadline.Token).ConfigureAwait(false); }
+            catch (IOException)
+            {
+                throw new DomainException("source_unavailable", "The curriculum source download was incomplete.");
+            }
             using var extractionDeadline = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
             extractionDeadline.CancelAfter(options.ExtractionTimeout);
-            var text = CurriculumText.ValidateAndNormalize(extractor.Extract(payload, options, extractionDeadline.Token),
+            var extracted = entry.Format == CurriculumSourceFormat.Pdf
+                ? extractor.Extract(payload, options, extractionDeadline.Token)
+                : await OakLessonTextExtractor.ExtractAsync(payload, entry, extractionDeadline.Token).ConfigureAwait(false);
+            var text = CurriculumText.ValidateAndNormalize(extracted,
                 entry, options, extractionDeadline.Token);
             extractionDeadline.Token.ThrowIfCancellationRequested();
             var hash = Convert.ToHexStringLower(SHA256.HashData(payload));
+            var extract = entry.Format == CurriculumSourceFormat.Pdf
+                ? CurriculumText.ShortExtract(text, entry.ExtractAnchor, options.MaximumExtractCharacters)
+                : FullTeachingExtract(text, options.MaximumExtractCharacters);
             var reference = new SourceReference(entry.Source.Id, entry.Source.Title, entry.Source.Url,
-                timeProvider.GetUtcNow(), hash, CurriculumText.ShortExtract(text, entry.ExtractAnchor, options.MaximumExtractCharacters));
+                timeProvider.GetUtcNow(), hash, extract);
             return new(reference, text);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -63,10 +74,6 @@ public sealed class CuratedCurriculumRetriever : ICurriculumRetriever, IDisposab
         catch (HttpRequestException)
         {
             throw new DomainException("source_unavailable", "The curriculum source could not be downloaded securely.");
-        }
-        catch (IOException)
-        {
-            throw new DomainException("source_unavailable", "The curriculum source download was incomplete.");
         }
         catch (FormatException)
         {
@@ -89,7 +96,8 @@ public sealed class CuratedCurriculumRetriever : ICurriculumRetriever, IDisposab
                 Version = HttpVersion.Version11,
                 VersionPolicy = HttpVersionPolicy.RequestVersionExact
             };
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/pdf"));
+            var mediaType = entry.Format == CurriculumSourceFormat.Pdf ? "application/pdf" : "text/html";
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(mediaType));
             request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("identity"));
             request.Headers.ConnectionClose = true;
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
@@ -104,12 +112,18 @@ public sealed class CuratedCurriculumRetriever : ICurriculumRetriever, IDisposab
 
             if (response.StatusCode != HttpStatusCode.OK)
                 throw new DomainException("source_unavailable", "The curriculum source did not return a complete document.");
-            if (!string.Equals(response.Content.Headers.ContentType?.MediaType, "application/pdf", StringComparison.OrdinalIgnoreCase) ||
+            if (!string.Equals(response.Content.Headers.ContentType?.MediaType, mediaType, StringComparison.OrdinalIgnoreCase) ||
                 response.Content.Headers.ContentEncoding.Any(encoding => !string.Equals(encoding, "identity", StringComparison.OrdinalIgnoreCase)))
-                throw new DomainException("source_invalid_response", "The curriculum source must return an uncompressed PDF response.");
+                throw new DomainException("source_invalid_response", "The curriculum source returned an unsupported media type or encoding.");
+            if (entry.Format == CurriculumSourceFormat.OakLessonHtml &&
+                !string.Equals(response.Content.Headers.ContentType?.CharSet?.Trim('"'), "utf-8", StringComparison.OrdinalIgnoreCase))
+                throw new DomainException("source_invalid_response", "The teaching source must declare UTF-8 text.");
 
+            var maximumBytes = entry.Format == CurriculumSourceFormat.OakLessonHtml
+                ? Math.Min(options.MaximumDownloadBytes, 1024 * 1024)
+                : options.MaximumDownloadBytes;
             var length = response.Content.Headers.ContentLength;
-            if (length is <= 0 || length > options.MaximumDownloadBytes)
+            if (length is <= 0 || length > maximumBytes)
                 throw new DomainException("source_payload_limit", "The curriculum source exceeds the download budget or is empty.");
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var output = new MemoryStream();
@@ -120,7 +134,7 @@ public sealed class CuratedCurriculumRetriever : ICurriculumRetriever, IDisposab
                 {
                     var read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false);
                     if (read == 0) break;
-                    if (output.Length + read > options.MaximumDownloadBytes)
+                    if (output.Length + read > maximumBytes)
                         throw new DomainException("source_payload_limit", "The curriculum source exceeds the download budget.");
                     output.Write(buffer, 0, read);
                 }
@@ -135,6 +149,14 @@ public sealed class CuratedCurriculumRetriever : ICurriculumRetriever, IDisposab
                 throw new DomainException("source_invalid_response", "The curriculum source returned an empty or incomplete document.");
             return output.ToArray();
         }
+    }
+
+    private static string FullTeachingExtract(string text, int maximumCharacters)
+    {
+        var extract = text.Replace('\n', ' ');
+        if (extract.Length > maximumCharacters)
+            throw new DomainException("source_text_limit", "The teaching evidence exceeds the extract budget.");
+        return extract;
     }
 
     private static bool IsRedirect(HttpStatusCode status) => status is HttpStatusCode.MovedPermanently or

@@ -138,6 +138,25 @@ public sealed class LessonEndpointCancellationTests
         AssertPermitReleased(gate);
     }
 
+    [Fact]
+    public async Task Invalid_sorting_example_redirects_to_specific_guidance_and_releases_the_permit()
+    {
+        var form = new RecordingForm();
+        var workflow = new RecordingWorkflow
+        {
+            Run = _ => throw new DomainException("sorting_example", "Untrusted details are not returned.")
+        };
+        var context = Context(form);
+        var gate = new ModelWorkGate();
+
+        var result = await Generate(context, Access(context), workflow, gate);
+        await result.ExecuteAsync(context);
+
+        Assert.Equal(StatusCodes.Status303SeeOther, context.Response.StatusCode);
+        Assert.Equal("/presenter?error=sorting", context.Response.Headers.Location.ToString());
+        AssertPermitReleased(gate);
+    }
+
     [Theory]
     [InlineData("form")]
     [InlineData("workflow")]

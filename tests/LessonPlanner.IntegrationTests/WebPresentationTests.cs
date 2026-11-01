@@ -1,6 +1,10 @@
 using System.IO.Compression;
 using System.Net;
 using System.Xml.Linq;
+using AngleSharp.Html.Parser;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Validation;
+using DocumentFormat.OpenXml.Wordprocessing;
 using LessonPlanner.Core;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,10 +38,104 @@ public sealed class WebPresentationTests(LocalTableFixture storage)
                 PresentationHtml.Attribute(candidate, "for") == id && PresentationHtml.Text(candidate.Groups["content"].Value) == label);
         var fields = HtmlForms.Fields(workspace, "/presenter/lessons");
         Assert.False(string.IsNullOrWhiteSpace(fields["__RequestVerificationToken"]));
+        using var document = new HtmlParser().ParseDocument(form.Value);
+        fields["Topic"] = document.QuerySelector("input[name=Topic]")!.GetAttribute("value")!;
+        fields["DurationMinutes"] = document.QuerySelector("input[name=DurationMinutes]")!.GetAttribute("value")!;
+        fields["EducationalLevel"] = document.QuerySelector("select[name=EducationalLevel] option[selected]")!.GetAttribute("value")!;
+        fields["Instructions"] = document.QuerySelector("textarea[name=Instructions]")!.TextContent;
+        Assert.Equal("Sorting algorithms: bubble, insertion and merge sort", fields["Topic"]);
+        Assert.Equal("GCSE (OCR J277)", fields["EducationalLevel"]);
+        Assert.Equal("60", fields["DurationMinutes"]);
+        Assert.Equal("Use the original example list 8, 3, 5, 1 to trace each algorithm. Ask pupils to explain comparisons and movements, then choose a suitable approach for another short list. Include a worked example, paired practice and an independent check.",
+            fields["Instructions"]);
         Assert.Contains("name=\"Topic\"", form.Value, StringComparison.Ordinal);
         Assert.Contains("name=\"EducationalLevel\"", form.Value, StringComparison.Ordinal);
         Assert.Contains("name=\"DurationMinutes\"", form.Value, StringComparison.Ordinal);
         Assert.Contains("name=\"Instructions\"", form.Value, StringComparison.Ordinal);
+        using var submitted = await client.PostAsync("/presenter/lessons", new FormUrlEncodedContent(fields));
+        Assert.Equal(HttpStatusCode.SeeOther, submitted.StatusCode);
+        var lessonId = submitted.Headers.Location!.OriginalString.Split('/').Last();
+        var record = await host.Services.GetRequiredService<ILessonStore>().FindAsync(lessonId, TestData.Presenter, CancellationToken.None);
+        Assert.NotNull(record);
+        Assert.Equal(new LessonRequest(fields["Topic"], fields["EducationalLevel"], 60, fields["Instructions"]), record.Request);
+        Assert.Equal(0, host.Services.GetRequiredService<LocalVerificationCounters>().ConfirmedPublications);
+    }
+
+    [Theory]
+    [InlineData(true, "Use the example list 8, 3, 5, 1.5 to trace each algorithm.")]
+    [InlineData(false, "Use the example list 8, 3, 5, 1.5 to trace each algorithm.")]
+    [InlineData(true, "Use the example list [8, 3] or [5, 1] to trace each algorithm.")]
+    [InlineData(false, "Use the example list [8, 3] or [5, 1] to trace each algorithm.")]
+    [InlineData(true, "Use the example list [8, 3] or try [5, 1] to trace each algorithm.")]
+    [InlineData(false, "Use the example list [8, 3] or a list [5, 1] to trace each algorithm.")]
+    public async Task Invalid_sorting_example_returns_specific_guidance_without_starting_a_lesson(bool enhanced, string instructions)
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        using var client = host.Client();
+        await host.SignInAsync(client);
+        var fields = HtmlForms.Fields(await client.GetStringAsync("/presenter?example=sorting"), "/presenter/lessons");
+        fields["Topic"] = "Sorting algorithms: bubble, insertion and merge sort";
+        fields["EducationalLevel"] = "GCSE (OCR J277)";
+        fields["DurationMinutes"] = "60";
+        fields["Instructions"] = instructions;
+        if (enhanced) client.DefaultRequestHeaders.Add("X-Lumero-Action", "fetch");
+
+        using var response = await client.PostAsync("/presenter/lessons", new FormUrlEncodedContent(fields));
+        if (enhanced)
+        {
+            Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+            using var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, body.RootElement.GetProperty("location").ValueKind);
+            Assert.Contains("two to eight whole numbers", body.RootElement.GetProperty("message").GetString(), StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.SeeOther, response.StatusCode);
+            Assert.Equal("/presenter?error=sorting", response.Headers.Location?.OriginalString);
+            Assert.Contains("two to eight whole numbers", await client.GetStringAsync(response.Headers.Location), StringComparison.Ordinal);
+        }
+        Assert.Equal(0, host.Services.GetRequiredService<LocalVerificationCounters>().TransportCalls);
+    }
+
+    [Fact]
+    public async Task Downloaded_oak_docx_has_clickable_fixed_attribution_links_and_literal_lesson_urls()
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        var record = TestData.LessonWithOakSources();
+        Assert.NotNull(record.Lesson);
+        const string untrusted = "https://attacker.example.org/document-link";
+        record = record with { Lesson = record.Lesson with
+        {
+            Explanation = $"Synthetic lesson data containing {untrusted} and <a href=\"{untrusted}\">literal link markup</a>."
+        } };
+        await storage.Store().SaveAsync(record, CancellationToken.None);
+        using var client = host.Client();
+        await host.SignInAsync(client);
+        using var response = await client.GetAsync($"/presenter/lessons/{record.Id}/document");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.wordprocessingml.document", response.Content.Headers.ContentType?.MediaType);
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = WordprocessingDocument.Open(stream, false);
+        Assert.Empty(new OpenXmlValidator().Validate(document));
+        var part = Assert.IsType<MainDocumentPart>(document.MainDocumentPart);
+        var body = part.Document!.Body!;
+        Assert.Contains(SortingTeachingSources.Attribution, body.InnerText, StringComparison.Ordinal);
+        Assert.Contains(record.Lesson.Explanation, body.InnerText, StringComparison.Ordinal);
+        var links = body.Descendants<Hyperlink>().ToArray();
+        Assert.Equal(2, links.Length);
+        var relationships = part.HyperlinkRelationships.ToArray();
+        Assert.Equal(2, relationships.Length);
+        foreach (var url in new[] { SortingTeachingSources.OakUrl, SortingTeachingSources.LicenceUrl })
+        {
+            var relationship = Assert.Single(relationships, item => item.Uri.AbsoluteUri == url);
+            Assert.True(relationship.IsExternal);
+            Assert.Equal(url, Assert.Single(links, link => link.Id?.Value == relationship.Id).InnerText);
+        }
+        Assert.Empty(part.ExternalRelationships);
+        Assert.Empty(body.Descendants<AltChunk>());
+        Assert.Empty(body.Descendants<SimpleField>());
+        Assert.Empty(body.Descendants<FieldCode>());
+        Assert.Equal(0, host.Services.GetRequiredService<LocalVerificationCounters>().ConfirmedPublications);
     }
 
     [Fact]

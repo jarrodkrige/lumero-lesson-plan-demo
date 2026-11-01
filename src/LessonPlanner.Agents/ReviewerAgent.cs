@@ -9,8 +9,14 @@ public sealed class ReviewerAgent(IRoleAgentProvider provider, AgentExecutionLim
         DomainRules.Require(DomainRules.ValidateRequest(request));
         AgentContractGuard.RequireSources(lesson.Sources, clock);
         DomainRules.Require(AgentContractGuard.Lesson(lesson, request));
-        return ReviewAsync(new { task = "lesson", request, lesson = LessonBody.From(lesson),
-            evidence = AgentContractGuard.Evidence(lesson.Sources) }, cancellationToken);
+        var context = new { task = "lesson", request, lesson = LessonBody.From(lesson),
+            evidence = AgentContractGuard.Evidence(lesson.Sources) };
+        var examples = SortingWorkedExamples.For(request, lesson.Sources);
+        object input = examples is null ? context : new
+        {
+            context.task, context.request, context.lesson, context.evidence, applicationCalculatedExamples = examples
+        };
+        return ReviewAsync(input, cancellationToken);
     }
 
     public Task<ReviewResult> ReviewQuizAsync(LessonPlan lesson, QuizContent quiz, CancellationToken cancellationToken)

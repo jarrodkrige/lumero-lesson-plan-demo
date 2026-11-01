@@ -433,6 +433,7 @@
       "lessonplanner.infrastructure": {
         "type": "Project",
         "dependencies": {
+          "AngleSharp": "[1.8.6, )",
           "Azure.Data.Tables": "[12.13.0, )",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.5.5, )",
           "Azure.Identity": "[1.21.0, )",
@@ -451,6 +452,12 @@
           "OpenTelemetry.Extensions.Hosting": "[1.20.1, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )"
         }
+      },
+      "AngleSharp": {
+        "type": "CentralTransitive",
+        "requested": "[1.8.6, )",
+        "resolved": "1.8.6",
+        "contentHash": "tdvrWSsHz8iRcb8U2cbFtYF6/1Mvhbe5ZxN/VdhVeIfp5vOvbwz3Bn7OZknnm2QSyGvM9ZaZLNLvfanPzNa61Q=="
       },
       "Azure.Data.Tables": {
         "type": "CentralTransitive",

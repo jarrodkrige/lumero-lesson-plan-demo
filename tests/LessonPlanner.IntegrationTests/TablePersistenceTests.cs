@@ -128,11 +128,106 @@ public sealed class TablePersistenceTests(LocalTableFixture storage)
         Assert.Single(results.Select(result => DomainRules.Hash(result)).Distinct());
         var restored = await storage.Store().FindResultAsync(draft.Id, attempt.Id, CancellationToken.None);
         Assert.Equal(DomainRules.Hash(results[0]), DomainRules.Hash(restored));
+        Assert.Empty(restored!.AttributedSources);
         var row = await storage.Table.GetEntityAsync<TableEntity>($"quiz-{draft.Id}", "publication");
         Assert.Equal(1, row.Value.GetInt32("SubmissionCount"));
         var changed = attempt with { Answers = TestData.Attempt(draft, "b").Answers };
         var error = await Assert.ThrowsAsync<DomainException>(() => store.SubmitAsync(changed, CancellationToken.None));
         Assert.Equal("attempt_conflict", error.Code);
+    }
+
+    [Fact]
+    public async Task OakAttributionIsTransientAndPreservesStoredDraftAndResultHashes()
+    {
+        var clock = new MutableClock();
+        var store = new AzureTableStore(storage.NewClient(), storage.Policy, new ExactMatchGradingPolicy(), clock);
+        var lesson = TestData.LessonWithOakSources();
+        var draft = TestData.DraftWithLessonSources(lesson);
+        await store.SaveAsync(lesson, CancellationToken.None);
+        await store.SaveDraftAsync(draft, CancellationToken.None);
+        var before = (await storage.Table.GetEntityAsync<TableEntity>($"quiz-{draft.Id}", "draft")).Value;
+        var payload = before.GetString("Payload");
+        var payloadHash = before.GetString("PayloadHash");
+        Assert.Equal(DomainRules.Hash(draft), payloadHash);
+        await PublishAsync(store, draft);
+
+        var quiz = Assert.IsType<PublicQuiz>(await store.FindPublishedAsync(draft.Id, CancellationToken.None));
+        Assert.Equal(SortingTeachingSources.All.ToArray(), quiz.AttributedSources.ToArray());
+        var json = System.Text.Json.JsonSerializer.Serialize(quiz, DomainRules.Json);
+        Assert.DoesNotContain("correctOptionId", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("private marking explanation", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Synthetic source extract", json, StringComparison.Ordinal);
+
+        var attempt = TestData.Attempt(draft);
+        var result = await store.SubmitAsync(attempt, CancellationToken.None);
+        var after = (await storage.Table.GetEntityAsync<TableEntity>($"quiz-{draft.Id}", "draft")).Value;
+        var resultRow = (await storage.Table.GetEntityAsync<TableEntity>($"quiz-{draft.Id}", $"attempt-{attempt.Id}")).Value;
+        Assert.Equal(payload, after.GetString("Payload"));
+        Assert.Equal(payloadHash, after.GetString("PayloadHash"));
+        Assert.Equal(SortingTeachingSources.All.ToArray(), result.AttributedSources.ToArray());
+        Assert.Equal(string.Join(",", SortingTeachingSources.All.Select(source => source.Id)), resultRow.GetString("OakSourceIds"));
+        Assert.NotNull(resultRow.GetString("OakSourceIdsHash"));
+        Assert.DoesNotContain("attributedSources", resultRow.GetString("Payload")!, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(DomainRules.Hash(result), resultRow.GetString("PayloadHash"));
+        Assert.Equal(DomainRules.Hash(result), DomainRules.Hash(result with { AttributedSources = [] }));
+        var replay = await store.SubmitAsync(attempt, CancellationToken.None);
+        Assert.Equal(SortingTeachingSources.All.ToArray(), replay.AttributedSources.ToArray());
+        after["PayloadHash"] = new string('f', 64);
+        await storage.Table.UpdateEntityAsync(after, after.ETag, TableUpdateMode.Replace);
+        var restored = Assert.IsType<QuizResult>(await store.FindResultAsync(draft.Id, attempt.Id, CancellationToken.None));
+        Assert.Equal(DomainRules.Hash(result), DomainRules.Hash(restored));
+        Assert.Equal(SortingTeachingSources.All.ToArray(), restored.AttributedSources.ToArray());
+        clock.Advance(TimeSpan.FromHours(2));
+        Assert.Null(await store.FindPublishedAsync(draft.Id, CancellationToken.None));
+        Assert.Null(await store.FindResultAsync(draft.Id, attempt.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ResultAttributionSurvivesRemovalOfItsDraft()
+    {
+        var store = storage.Store();
+        var lesson = TestData.LessonWithOakSources();
+        var draft = TestData.DraftWithLessonSources(lesson);
+        await store.SaveAsync(lesson, CancellationToken.None);
+        await store.SaveDraftAsync(draft, CancellationToken.None);
+        await PublishAsync(store, draft);
+        var attempt = TestData.Attempt(draft);
+        await store.SubmitAsync(attempt, CancellationToken.None);
+        await storage.Table.DeleteEntityAsync($"quiz-{draft.Id}", "draft");
+        var result = Assert.IsType<QuizResult>(await store.FindResultAsync(draft.Id, attempt.Id, CancellationToken.None));
+        Assert.Equal(SortingTeachingSources.All.ToArray(), result.AttributedSources.ToArray());
+    }
+
+    [Theory]
+    [InlineData("missing-ids")]
+    [InlineData("missing-hash")]
+    [InlineData("unknown-source")]
+    [InlineData("duplicate-source")]
+    [InlineData("changed-hash")]
+    public async Task InvalidResultAttributionFailsClosed(string alteration)
+    {
+        var store = storage.Store();
+        var lesson = TestData.LessonWithOakSources();
+        var draft = TestData.DraftWithLessonSources(lesson);
+        await store.SaveAsync(lesson, CancellationToken.None);
+        await store.SaveDraftAsync(draft, CancellationToken.None);
+        await PublishAsync(store, draft);
+        var attempt = TestData.Attempt(draft);
+        await store.SubmitAsync(attempt, CancellationToken.None);
+        var row = (await storage.Table.GetEntityAsync<TableEntity>($"quiz-{draft.Id}", $"attempt-{attempt.Id}")).Value;
+        switch (alteration)
+        {
+            case "missing-ids": row.Remove("OakSourceIds"); break;
+            case "missing-hash": row.Remove("OakSourceIdsHash"); break;
+            case "unknown-source": row["OakSourceIds"] = "unknown-source"; break;
+            case "duplicate-source": row["OakSourceIds"] = $"{SortingTeachingSources.MergeId},{SortingTeachingSources.MergeId}"; break;
+            case "changed-hash": row["OakSourceIdsHash"] = new string('f', 64); break;
+            default: throw new InvalidOperationException();
+        }
+        await storage.Table.UpdateEntityAsync(row, row.ETag, TableUpdateMode.Replace);
+        var error = await Assert.ThrowsAsync<DomainException>(() =>
+            store.FindResultAsync(draft.Id, attempt.Id, CancellationToken.None));
+        Assert.Equal("invalid_record", error.Code);
     }
 
     [Fact]

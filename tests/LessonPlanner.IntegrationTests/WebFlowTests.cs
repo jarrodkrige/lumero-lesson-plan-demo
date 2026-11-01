@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using LessonPlanner.Core;
 using LessonPlanner.Web.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LessonPlanner.IntegrationTests;
 
@@ -73,6 +74,76 @@ public sealed class WebFlowTests(LocalTableFixture storage)
             qr.IsSuccessStatusCode ? null : await qr.Content.ReadAsStringAsync());
         Assert.Equal("image/png", qr.Content.Headers.ContentType?.MediaType);
         Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, (await qr.Content.ReadAsByteArrayAsync())[..8]);
+    }
+
+    [Fact]
+    public async Task Synthetic_oak_sources_are_attributed_on_lesson_quiz_and_result_pages()
+    {
+        await using var host = await WebTestHost.StartAsync(storage);
+        var store = storage.Store();
+        var lesson = TestData.LessonWithOakSources();
+        var draft = TestData.DraftWithLessonSources(lesson);
+        await store.SaveAsync(lesson, CancellationToken.None);
+        await store.SaveDraftAsync(draft, CancellationToken.None);
+        var approval = await store.ApproveAsync(draft.Id, TestData.Presenter, TestData.ClientId, CancellationToken.None);
+        await store.PublishAsync(TestData.Approved(approval), new(TestData.Presenter, TestData.ClientId), CancellationToken.None);
+        var attempt = TestData.Attempt(draft);
+        await store.SubmitAsync(attempt, CancellationToken.None);
+
+        using var presenter = host.Client();
+        await host.SignInAsync(presenter);
+        using var participant = host.Client();
+        using var lessonResponse = await presenter.GetAsync($"/presenter/lessons/{lesson.Id}");
+        using var quizResponse = await participant.GetAsync($"/quiz/{draft.Id}");
+        using var resultResponse = await participant.GetAsync($"/quiz/{draft.Id}/results/{attempt.Id}");
+        Assert.Equal(HttpStatusCode.OK, lessonResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, quizResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, resultResponse.StatusCode);
+        var lessonHtml = await lessonResponse.Content.ReadAsStringAsync();
+        var quizHtml = await quizResponse.Content.ReadAsStringAsync();
+        var resultHtml = await resultResponse.Content.ReadAsStringAsync();
+        foreach (var html in new[] { lessonHtml, quizHtml, resultHtml })
+        {
+            Assert.Contains("A computing lesson by", html, StringComparison.Ordinal);
+            Assert.Contains(SortingTeachingSources.OakUrl, html, StringComparison.Ordinal);
+            Assert.Contains(SortingTeachingSources.LicenceUrl, html, StringComparison.Ordinal);
+            foreach (var source in SortingTeachingSources.All)
+                Assert.Contains(source.Url.AbsoluteUri, html, StringComparison.Ordinal);
+        }
+        Assert.DoesNotContain("correctOptionId", quizHtml, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("private marking explanation", quizHtml, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("private marking explanation", resultHtml, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Result_page_retains_attribution_without_a_second_public_quiz_lookup(bool invalidRecord)
+    {
+        var store = storage.Store();
+        var lesson = TestData.LessonWithOakSources();
+        var draft = TestData.DraftWithLessonSources(lesson);
+        await store.SaveAsync(lesson, CancellationToken.None);
+        await store.SaveDraftAsync(draft, CancellationToken.None);
+        var approval = await store.ApproveAsync(draft.Id, TestData.Presenter, TestData.ClientId, CancellationToken.None);
+        await store.PublishAsync(TestData.Approved(approval), new(TestData.Presenter, TestData.ClientId), CancellationToken.None);
+        var attempt = TestData.Attempt(draft);
+        await store.SubmitAsync(attempt, CancellationToken.None);
+        var unavailable = new UnavailablePublicQuizStore(store, invalidRecord);
+        await using var host = await WebTestHost.StartAsync(storage, configureTestServices: services =>
+        {
+            services.RemoveAll<IQuizStore>();
+            services.AddSingleton<IQuizStore>(unavailable);
+        });
+        using var participant = host.Client();
+        using var response = await participant.GetAsync($"/quiz/{draft.Id}/results/{attempt.Id}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, unavailable.PublicLookups);
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("private marking explanation", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(SortingTeachingSources.LicenceUrl, html, StringComparison.Ordinal);
+        foreach (var source in SortingTeachingSources.All)
+            Assert.Contains(source.Url.AbsoluteUri, html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -243,6 +314,24 @@ public sealed class WebFlowTests(LocalTableFixture storage)
         var draftPath = drafted.Headers.Location!.OriginalString;
         Assert.DoesNotContain("error=", draftPath, StringComparison.Ordinal);
         return (lessonId, draftPath.Split('/').Last(), await client.GetStringAsync(draftPath));
+    }
+
+    private sealed class UnavailablePublicQuizStore(IQuizStore inner, bool invalidRecord) : IQuizStore
+    {
+        public int PublicLookups { get; private set; }
+        public Task<QuizResult?> FindResultAsync(string quizId, string attemptId, CancellationToken cancellationToken) =>
+            inner.FindResultAsync(quizId, attemptId, cancellationToken);
+        public Task<PublicQuiz?> FindPublishedAsync(string id, CancellationToken cancellationToken)
+        {
+            PublicLookups++;
+            if (invalidRecord) throw new DomainException("invalid_record", "The stored record failed integrity validation.");
+            return Task.FromResult<PublicQuiz?>(null);
+        }
+        public Task SaveDraftAsync(QuizDraft draft, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<QuizDraft?> FindDraftAsync(string id, PresenterIdentity presenter, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<PublicationApproval> ApproveAsync(string draftId, PresenterIdentity presenter, string callerClientId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<PublishedQuiz> PublishAsync(ApprovedPublication request, PublicationCaller caller, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<QuizResult> SubmitAsync(QuizAttempt attempt, CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }
 

@@ -18,6 +18,7 @@ public sealed class LessonWorkflow(IOrchestratorAgent orchestrator, ICurriculumA
         DomainRules.RequirePresenter(presenter);
         DomainRules.Require(DomainRules.ValidateRequest(request));
         limits.Validate();
+        SortingWorkedExamples.ValidateInput(request);
         var trace = new ActivityTrace(DomainRules.NewId(), clock, progress);
         var createdAt = clock.GetUtcNow();
         LessonRecord record;

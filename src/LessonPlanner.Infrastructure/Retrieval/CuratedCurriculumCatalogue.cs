@@ -5,21 +5,26 @@ namespace LessonPlanner.Infrastructure.Retrieval;
 
 public static class CuratedCurriculumCatalogue
 {
-    public const string OcrJ277Specification = "ocr-j277-specification";
+    public const string OcrJ277Specification = SortingTeachingSources.OcrSpecificationId;
     public const string DfeComputingKeyStages3And4 = "dfe-computing-ks3-ks4";
 
     internal static ImmutableArray<CatalogueEntry> Entries { get; } =
     [
-        new(new(OcrJ277Specification, "OCR GCSE (9–1) Computer Science J277 specification",
-                new("https://www.ocr.org.uk/Images/558027-specification-gcse-computer-science-j277.pdf")),
+        new(SortingTeachingSources.OcrSpecification,
             [new("https://www.ocr.org.uk/Images/558027-specification-gcse-computer-science-j277.pdf"),
              new("https://ocr.org.uk/Images/558027-specification-gcse-computer-science-j277.pdf")],
             ["J277", "algorithms", "sorting"], "sorting"),
         new(new(DfeComputingKeyStages3And4, "Department for Education: computing programmes of study, key stages 3 and 4",
                 new("https://assets.publishing.service.gov.uk/media/5a7cb981ed915d682236228d/SECONDARY_national_curriculum_-_Computing.pdf")),
             [new("https://assets.publishing.service.gov.uk/media/5a7cb981ed915d682236228d/SECONDARY_national_curriculum_-_Computing.pdf")],
-            ["computing", "key stage 3", "algorithms"], "key stage 3")
+            ["computing", "key stage 3", "algorithms"], "key stage 3"),
+        Oak(SortingTeachingSources.All[0], ["bubble sort", "adjacent", "swaps", "pass"]),
+        Oak(SortingTeachingSources.All[1], ["insertion sort", "sorted sublist", "unsorted sublist", "correct position"]),
+        Oak(SortingTeachingSources.All[2], ["merge sort", "splits", "merging", "sorted list"])
     ];
+
+    private static CatalogueEntry Oak(CurriculumSource source, ImmutableArray<string> markers) =>
+        new(source, [source.Url], markers, "", CurriculumSourceFormat.OakLessonHtml);
 
     public static IReadOnlyList<CurriculumSource> Sources { get; } =
         Entries.Select(entry => entry.Source).ToImmutableArray();
@@ -32,8 +37,10 @@ public static class CuratedCurriculumCatalogue
         entry.AllowedLocations.Any(location => string.Equals(location.IdnHost, host, StringComparison.OrdinalIgnoreCase)));
 }
 
+internal enum CurriculumSourceFormat { Pdf, OakLessonHtml }
+
 internal sealed record CatalogueEntry(CurriculumSource Source, ImmutableArray<Uri> AllowedLocations,
-    ImmutableArray<string> IdentityMarkers, string ExtractAnchor)
+    ImmutableArray<string> IdentityMarkers, string ExtractAnchor, CurriculumSourceFormat Format = CurriculumSourceFormat.Pdf)
 {
     internal void RequireAllowedLocation(Uri location)
     {

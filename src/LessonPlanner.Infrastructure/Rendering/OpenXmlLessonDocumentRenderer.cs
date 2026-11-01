@@ -64,6 +64,11 @@ public sealed class OpenXmlLessonDocumentRenderer : ILessonDocumentRenderer
                 Add(body, $"Downloaded payload SHA-256: {source.Sha256}");
                 Add(body, $"Short evidence extract: {source.Extract}");
             }
+            if (plan.Sources.Any(SortingTeachingSources.Matches))
+            {
+                Add(body, SortingTeachingSources.Attribution);
+                AddAttributionLinks(mainPart, body);
+            }
 
             body.Append(new SectionProperties(
                 new PageSize { Width = 11906U, Height = 16838U },
@@ -129,6 +134,25 @@ public sealed class OpenXmlLessonDocumentRenderer : ILessonDocumentRenderer
         Add(body, heading, "Heading1");
         var index = 1;
         foreach (var item in items) Add(body, numbered ? $"{index++}. {item}" : $"• {item}");
+    }
+
+    private static void AddAttributionLinks(MainDocumentPart mainPart, Body body)
+    {
+        (string Label, string Url)[] links =
+        [
+            ("Oak National Academy", SortingTeachingSources.OakUrl),
+            ("Open Government Licence (OGL)", SortingTeachingSources.LicenceUrl)
+        ];
+        foreach (var (label, url) in links)
+        {
+            var relationship = mainPart.AddHyperlinkRelationship(new Uri(url), isExternal: true);
+            body.Append(new Paragraph(
+                new ParagraphProperties(new ParagraphStyleId { Val = "Normal" }),
+                new Run(new Text($"{label}: ") { Space = SpaceProcessingModeValues.Preserve }),
+                new Hyperlink(new Run(
+                    new RunProperties(new Color { Val = "0563C1" }, new Underline { Val = UnderlineValues.Single }),
+                    new Text(url))) { Id = relationship.Id, History = true }));
+        }
     }
 
     private static void Add(Body body, string text, string style = "Normal")

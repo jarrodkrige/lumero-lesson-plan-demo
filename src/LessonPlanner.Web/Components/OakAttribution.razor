@@ -1,0 +1,22 @@
+@if (_sources.Length > 0)
+{
+    <section class="after-paper" aria-label="Source attribution">
+        <p>Source: A computing lesson by <a href="@SortingTeachingSources.OakUrl" rel="noreferrer noopener">Oak National Academy</a> licensed under <a href="@SortingTeachingSources.LicenceUrl" rel="noreferrer noopener">Open Government Licence (OGL)</a>.</p>
+        <ul>
+            @foreach (var source in _sources)
+            {
+                <li><a href="@source.Url.AbsoluteUri" rel="noreferrer noopener">@source.Title</a></li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    [Parameter] public IEnumerable<CurriculumSource> Sources { get; set; } = [];
+    private CurriculumSource[] _sources = [];
+
+    protected override void OnParametersSet()
+    {
+        _sources = SortingTeachingSources.All.Where(source => Sources.Contains(source)).ToArray();
+    }
+}

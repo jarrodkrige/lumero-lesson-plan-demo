@@ -863,6 +863,7 @@
       "lessonplanner.infrastructure": {
         "type": "Project",
         "dependencies": {
+          "AngleSharp": "[1.8.6, )",
           "Azure.Data.Tables": "[12.13.0, )",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.5.5, )",
           "Azure.Identity": "[1.21.0, )",
@@ -914,6 +915,12 @@
           "Microsoft.Identity.Web": "[4.16.1, )",
           "System.Security.Cryptography.Pkcs": "[10.0.14, )"
         }
+      },
+      "AngleSharp": {
+        "type": "CentralTransitive",
+        "requested": "[1.8.6, )",
+        "resolved": "1.8.6",
+        "contentHash": "tdvrWSsHz8iRcb8U2cbFtYF6/1Mvhbe5ZxN/VdhVeIfp5vOvbwz3Bn7OZknnm2QSyGvM9ZaZLNLvfanPzNa61Q=="
       },
       "Azure.Data.Tables": {
         "type": "CentralTransitive",

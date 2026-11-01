@@ -140,6 +140,24 @@ public sealed class PresentationComponentTests
         }
     }
 
+    [Fact]
+    public async Task Oak_attribution_is_visible_outside_the_source_disclosure_and_uses_trusted_links()
+    {
+        var lesson = TestData.LessonWithOakSources();
+        var html = await RenderAsync<SourceCitations>(nameof(SourceCitations.Sources), lesson.Lesson!.Sources);
+        var attribution = PresentationHtml.Element(html, "section", "after-paper");
+        Assert.Equal("Source attribution", PresentationHtml.Attribute(attribution, "aria-label"));
+        Assert.True(html.IndexOf(attribution.Value, StringComparison.Ordinal) >
+            html.IndexOf("</details>", StringComparison.Ordinal));
+        Assert.Contains("A computing lesson by Oak National Academy", PresentationHtml.Text(attribution.Value), StringComparison.Ordinal);
+        var links = PresentationHtml.Elements(attribution.Value, "a").ToArray();
+        Assert.Equal(5, links.Length);
+        Assert.Equal(SortingTeachingSources.OakUrl, PresentationHtml.Attribute(links[0], "href"));
+        Assert.Equal(SortingTeachingSources.LicenceUrl, PresentationHtml.Attribute(links[1], "href"));
+        foreach (var source in SortingTeachingSources.All)
+            Assert.Contains(links, link => PresentationHtml.Attribute(link, "href") == source.Url.AbsoluteUri);
+    }
+
     private static ActivityEvent Event(AgentRole role, ActivityState state, int minute) =>
         new("synthetic-record", RecordedAt.AddMinutes(minute), role, state, "Synthetic recorded event for presentation verification.");
 

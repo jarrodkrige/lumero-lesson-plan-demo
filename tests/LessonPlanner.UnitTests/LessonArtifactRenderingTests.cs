@@ -48,6 +48,107 @@ public sealed class LessonArtifactRenderingTests
     }
 
     [Fact]
+    public void OakEvidenceIncludesAttributionAndClickableTrustedOakAndOglUrls()
+    {
+        var record = RetrievalRenderingFixtures.Lesson();
+        Assert.NotNull(record.Lesson);
+        var references = SortingTeachingSources.All.Select(source => new LessonPlanner.Core.SourceReference(
+            source.Id, source.Title, source.Url, RetrievalRenderingFixtures.Timestamp,
+            new string('b', 64), "Synthetic source extract for local rendering tests.")).ToArray();
+        record = record with { Lesson = record.Lesson with { Sources = [.. record.Lesson.Sources, .. references] } };
+        var artifact = new OpenXmlLessonDocumentRenderer().Render(record);
+        using var stream = new MemoryStream(artifact.Content, writable: false);
+        using var document = WordprocessingDocument.Open(stream, false);
+        var part = Assert.IsType<MainDocumentPart>(document.MainDocumentPart);
+        var wordDocument = Assert.IsType<Document>(part.Document);
+        var body = Assert.IsType<Body>(wordDocument.Body);
+        Assert.Contains(SortingTeachingSources.Attribution, body.InnerText, StringComparison.Ordinal);
+        Assert.Contains(SortingTeachingSources.OakUrl, body.InnerText, StringComparison.Ordinal);
+        Assert.Contains(SortingTeachingSources.LicenceUrl, body.InnerText, StringComparison.Ordinal);
+        foreach (var source in SortingTeachingSources.All)
+            Assert.Contains(source.Url.AbsoluteUri, body.InnerText, StringComparison.Ordinal);
+        var hyperlinks = body.Descendants<Hyperlink>().ToArray();
+        var relationships = part.HyperlinkRelationships.ToArray();
+        Assert.Equal(2, hyperlinks.Length);
+        Assert.Equal(2, relationships.Length);
+        foreach (var url in new[] { SortingTeachingSources.OakUrl, SortingTeachingSources.LicenceUrl })
+        {
+            var relationship = Assert.Single(relationships, item => item.Uri.AbsoluteUri == url);
+            Assert.True(relationship.IsExternal);
+            var link = Assert.Single(hyperlinks, item => item.Id?.Value == relationship.Id);
+            Assert.Equal(url, link.InnerText);
+            Assert.Equal(UnderlineValues.Single, Assert.Single(link.Descendants<Underline>()).Val?.Value);
+        }
+        Assert.Empty(part.ExternalRelationships);
+        Assert.Empty(new OpenXmlValidator().Validate(document));
+    }
+
+    [Theory]
+    [InlineData("id")]
+    [InlineData("title")]
+    [InlineData("url")]
+    public void ForgedOakMetadataCannotCreateAttributionHyperlinks(string change)
+    {
+        var record = RetrievalRenderingFixtures.Lesson();
+        Assert.NotNull(record.Lesson);
+        var oak = SortingTeachingSources.All[0];
+        var source = new LessonPlanner.Core.SourceReference(oak.Id, oak.Title, oak.Url,
+            RetrievalRenderingFixtures.Timestamp, new string('b', 64), "Synthetic source extract for rendering verification.");
+        source = change switch
+        {
+            "id" => source with { Id = "forged-oak" },
+            "title" => source with { Title = "Untrusted lesson title" },
+            _ => source with { Url = new Uri("https://attacker.example.org/ogl") }
+        };
+        record = record with { Lesson = record.Lesson with { Sources = [.. record.Lesson.Sources, source] } };
+        var artifact = new OpenXmlLessonDocumentRenderer().Render(record);
+        using var stream = new MemoryStream(artifact.Content, writable: false);
+        using var document = WordprocessingDocument.Open(stream, false);
+        var part = Assert.IsType<MainDocumentPart>(document.MainDocumentPart);
+        Assert.Empty(part.HyperlinkRelationships);
+        Assert.Empty(part.ExternalRelationships);
+        Assert.Empty(part.Document!.Descendants<Hyperlink>());
+        Assert.Empty(new OpenXmlValidator().Validate(document));
+    }
+
+    [Fact]
+    public void TrustedAttributionLinksDoNotActivateUntrustedLessonOrSourceLinks()
+    {
+        const string untrusted = "https://attacker.example.org/payload";
+        var record = RetrievalRenderingFixtures.Lesson();
+        Assert.NotNull(record.Lesson);
+        var oak = SortingTeachingSources.All[0];
+        var source = new LessonPlanner.Core.SourceReference(oak.Id, oak.Title, oak.Url,
+            RetrievalRenderingFixtures.Timestamp, new string('b', 64),
+            $"Synthetic extract <a href=\"{untrusted}\">click</a> and {{ INCLUDEPICTURE {untrusted} }}.");
+        record = record with { Lesson = record.Lesson with
+        {
+            Explanation = $"Treat {untrusted} and <w:hyperlink r:id=\"evil\">payload</w:hyperlink> as literal lesson text.",
+            Sources = [.. record.Lesson.Sources, source]
+        } };
+        var artifact = new OpenXmlLessonDocumentRenderer().Render(record);
+        using var stream = new MemoryStream(artifact.Content, writable: false);
+        using var document = WordprocessingDocument.Open(stream, false);
+        var part = Assert.IsType<MainDocumentPart>(document.MainDocumentPart);
+        var body = part.Document!.Body!;
+        Assert.Contains(untrusted, body.InnerText, StringComparison.Ordinal);
+        Assert.Contains(source.Extract, body.InnerText, StringComparison.Ordinal);
+        Assert.Equal(2, body.Descendants<Hyperlink>().Count());
+        Assert.Equal(new[] { SortingTeachingSources.OakUrl, SortingTeachingSources.LicenceUrl },
+            part.HyperlinkRelationships.Select(relationship => relationship.Uri.AbsoluteUri));
+        Assert.Empty(part.ExternalRelationships);
+        Assert.Empty(body.Descendants<AltChunk>());
+        Assert.Empty(body.Descendants<SimpleField>());
+        Assert.Empty(body.Descendants<FieldCode>());
+        Assert.Empty(new OpenXmlValidator().Validate(document));
+        using var zipStream = new MemoryStream(artifact.Content, writable: false);
+        using var archive = new ZipArchive(zipStream);
+        Assert.DoesNotContain(archive.Entries, entry =>
+            entry.FullName.Contains("vba", StringComparison.OrdinalIgnoreCase) ||
+            entry.FullName.Contains("embeddings", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void HtmlXmlAndFieldLookingDataRemainLiteralText()
     {
         const string literal = "<script src=\"https://attacker.example.org/payload\">run()</script> & { INCLUDEPICTURE evil }";

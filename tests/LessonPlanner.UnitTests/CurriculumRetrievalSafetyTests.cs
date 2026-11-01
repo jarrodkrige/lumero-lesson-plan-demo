@@ -62,13 +62,15 @@ public sealed class CurriculumRetrievalSafetyTests
     [Fact]
     public void CatalogueContainsOnlyExplicitSourceIdentifiersAndHttpsDocuments()
     {
-        Assert.Equal(2, CuratedCurriculumCatalogue.Sources.Count);
+        Assert.Equal(5, CuratedCurriculumCatalogue.Sources.Count);
         Assert.All(CuratedCurriculumCatalogue.Sources, source =>
         {
             Assert.Equal("https", source.Url.Scheme);
-            Assert.EndsWith(".pdf", source.Url.AbsolutePath, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(":", source.Id, StringComparison.Ordinal);
         });
+        Assert.All(CuratedCurriculumCatalogue.Sources.Take(2), source =>
+            Assert.EndsWith(".pdf", source.Url.AbsolutePath, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(SortingTeachingSources.All, CuratedCurriculumCatalogue.Sources.Skip(2));
         Assert.Contains(CuratedCurriculumCatalogue.Sources, source => source.Id == CuratedCurriculumCatalogue.OcrJ277Specification);
         Assert.Contains(CuratedCurriculumCatalogue.Sources, source => source.Id == CuratedCurriculumCatalogue.DfeComputingKeyStages3And4);
     }

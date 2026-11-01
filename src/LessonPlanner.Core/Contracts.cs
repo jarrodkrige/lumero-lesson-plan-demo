@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json.Serialization;
 
 namespace LessonPlanner.Core;
 
@@ -52,11 +53,18 @@ public sealed record PublishedQuiz(string Id, string Title, Uri PublicUrl, DateT
 
 // The anonymous read contract deliberately has no marking key or explanation.
 public sealed record PublicQuestion(string Id, string Prompt, ImmutableArray<QuizOption> Options);
-public sealed record PublicQuiz(string Id, string Title, ImmutableArray<PublicQuestion> Questions, DateTimeOffset ExpiresAt);
+public sealed record PublicQuiz(string Id, string Title, ImmutableArray<PublicQuestion> Questions, DateTimeOffset ExpiresAt)
+{
+    public ImmutableArray<CurriculumSource> AttributedSources { get; init; } = [];
+}
 public sealed record QuizAnswer(string QuestionId, string OptionId);
 public sealed record QuizAttempt(string Id, string QuizId, ImmutableArray<QuizAnswer> Answers);
 public sealed record MarkedQuestion(string QuestionId, string Prompt, string SelectedOptionId, string CorrectOptionId,
     bool IsCorrect, string Explanation);
 public sealed record QuizResult(string AttemptId, string QuizId, int Score, int Total, string Feedback,
-    ImmutableArray<MarkedQuestion> Questions, DateTimeOffset SubmittedAt);
+    ImmutableArray<MarkedQuestion> Questions, DateTimeOffset SubmittedAt)
+{
+    [JsonIgnore]
+    public ImmutableArray<CurriculumSource> AttributedSources { get; init; } = [];
+}
 public sealed record LessonDocument(string FileName, string ContentType, byte[] Content);
