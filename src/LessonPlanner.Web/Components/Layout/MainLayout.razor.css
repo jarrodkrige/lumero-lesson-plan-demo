@@ -5,9 +5,9 @@
 
 .site-header-inner {
     max-width: 76rem;
-    min-height: 5.25rem;
+    min-height: 4.25rem;
     margin-inline: auto;
-    padding: 1rem 2rem;
+    padding: .6rem 2rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
@@ -16,17 +16,10 @@
 .wordmark {
     color: var(--ink);
     font-family: var(--heading-font);
-    font-size: 1.65rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: -.045em;
+    letter-spacing: -.035em;
     text-decoration: none;
-}
-
-.site-description {
-    border-left: 1px solid var(--line);
-    padding-left: 1.5rem;
-    color: var(--muted);
-    font-size: .9rem;
 }
 
 .site-navigation {
@@ -38,41 +31,31 @@
     font-size: .9rem;
 }
 
+.site-navigation ::deep a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+}
+
 .site-navigation form {
     margin: 0;
 }
 
 .page-shell {
     width: min(100%, 76rem);
-    min-height: calc(100vh - 12rem);
+    min-height: calc(100vh - 4.25rem);
     margin-inline: auto;
-    padding: 3rem 2rem 4rem;
+    padding: 2rem 2rem 3rem;
 }
-
-.site-footer {
-    max-width: 72rem;
-    margin-inline: auto;
-    border-top: 1px solid var(--line);
-    padding: 1.25rem 0 2rem;
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem 2rem;
-    color: var(--muted);
-    font-size: .82rem;
-}
-
-.site-footer p { margin: 0; }
 
 @media (max-width: 52rem) {
-    .site-description { display: none; }
     .site-header-inner { padding-inline: 1.25rem; }
-    .page-shell { padding: 2rem 1.25rem 3rem; }
-    .site-footer { margin-inline: 1.25rem; flex-direction: column; gap: .35rem; }
+    .page-shell { padding: 1.5rem 1.25rem 2rem; }
 }
 
-@media (max-width: 30rem) {
-    .site-header-inner { flex-wrap: wrap; gap: .5rem 1rem; }
+@media (max-width: 34rem) {
+    .site-header-inner { flex-wrap: wrap; gap: .35rem 1rem; padding-inline: 1rem; }
     .site-navigation { gap: 1rem; }
-    .wordmark { font-size: 1.45rem; }
+    .wordmark { font-size: 1.35rem; }
     .page-shell { padding-inline: 1rem; }
 }

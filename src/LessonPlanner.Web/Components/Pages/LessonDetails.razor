@@ -4,7 +4,7 @@
 @inject PresenterAccess Presenter
 @inject ILessonStore LessonStore
 
-<PageTitle>@(_record?.Lesson?.Title ?? "Lesson") | Lumero</PageTitle>
+<PageTitle>@(_record?.Lesson?.Title ?? "Lesson") | Agent demo</PageTitle>
 <HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
 
 @if (_record is null)
@@ -15,15 +15,30 @@
 }
 else
 {
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/presenter">Lesson workbench</a><span>Lesson review</span></nav>
-    <header class="page-heading">
-        <p class="status-label @(IsReady ? "status-success" : "status-warning")">@StatusLabel</p>
-        <h1>@(_record.Lesson?.Title ?? _record.Request.Topic)</h1>
-        <dl class="lesson-facts">
-            <div><dt>Educational level</dt><dd>@_record.Request.EducationalLevel</dd></div>
-            <div><dt>Requested length</dt><dd>@_record.Request.DurationMinutes minutes</dd></div>
-            <div><dt>Created</dt><dd><time datetime="@DisplayText.Timestamp(_record.CreatedAt)">@DisplayText.Date(_record.CreatedAt)</time></dd></div>
-        </dl>
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/presenter">New lesson</a><span>Lesson</span></nav>
+    <header class="page-heading with-actions">
+        <div>
+            <p class="status-label @(IsReady ? "status-success" : "status-warning")">@StatusLabel</p>
+            <h1>@(_record.Lesson?.Title ?? _record.Request.Topic)</h1>
+            <dl class="lesson-facts">
+                <div><dt class="visually-hidden">Educational level</dt><dd>@_record.Request.EducationalLevel</dd></div>
+                <div><dt class="visually-hidden">Requested length</dt><dd>@_record.Request.DurationMinutes minutes</dd></div>
+            </dl>
+        </div>
+        <div class="heading-actions">
+            @if (IsReady)
+            {
+                <a class="button button-secondary" href="@($"/presenter/lessons/{RouteId(Id)}/document")">Download lesson</a>
+                <form method="post" action="@($"/presenter/lessons/{RouteId(Id)}/quiz")">
+                    <AntiforgeryToken />
+                    <button class="button" type="submit">Create quiz</button>
+                </form>
+            }
+            else
+            {
+                <a class="button button-secondary" href="/presenter">New lesson</a>
+            }
+        </div>
     </header>
 
     <PageNotice Message="@ErrorMessage" />
@@ -32,83 +47,70 @@ else
         <PageNotice Title="This lesson is not ready for a quiz" Message="@CorrectiveGuidance" />
     }
 
-    <div class="workbench-grid">
-        <article class="paper lesson-paper" aria-label="Lesson plan">
-            @if (_record.Lesson is { } lesson)
-            {
-                <section class="content-section">
-                    <h2>Lesson overview</h2>
-                    <p class="lede preserve-lines">@lesson.Overview</p>
-                </section>
-                <section class="content-section" aria-labelledby="objectives-heading">
-                    <h2 id="objectives-heading">Learning objectives</h2>
-                    <ul class="objective-list">
-                        @foreach (var objective in lesson.Objectives)
-                        {
-                            <li><p>@objective.Description</p><SourceLinks SourceIds="objective.SourceIds" Sources="lesson.Sources" /></li>
-                        }
-                    </ul>
-                </section>
-                <div class="preparation-grid content-section">
-                    <section><h2>Prior learning</h2>
-                        @if (lesson.Prerequisites.IsDefaultOrEmpty) { <p>No prerequisites were recorded.</p> }
-                        else { <ul>@foreach (var item in lesson.Prerequisites) { <li>@item</li> }</ul> }
-                    </section>
-                    <section><h2>Materials</h2>
-                        @if (lesson.Materials.IsDefaultOrEmpty) { <p>No materials were recorded.</p> }
-                        else { <ul>@foreach (var item in lesson.Materials) { <li>@item</li> }</ul> }
-                    </section>
-                </div>
-                <section class="content-section"><h2>Teaching explanation</h2><p class="preserve-lines">@lesson.Explanation</p></section>
-                <section class="content-section" aria-labelledby="sequence-heading">
-                    <div class="section-heading"><h2 id="sequence-heading">Lesson sequence</h2><p>@lesson.Activities.Sum(activity => activity.DurationMinutes) minutes planned</p></div>
-                    <ol class="lesson-sequence">
-                        @{ var elapsedMinutes = 0; }
-                        @foreach (var activity in lesson.Activities)
-                        {
-                            var startMinute = elapsedMinutes;
-                            elapsedMinutes += activity.DurationMinutes;
-                            <li>
-                                <div class="time-block"><strong>@startMinute to @elapsedMinutes</strong>@(" ")<span>minutes</span></div>
-                                <div class="activity-content">
-                                    <h3>@activity.Title</h3>
+    <ActivityTimeline Activities="_record.Activities" />
+
+    <article class="paper lesson-paper" aria-label="Lesson plan">
+        @if (_record.Lesson is { } lesson)
+        {
+            <section class="content-section" aria-label="Lesson overview">
+                <p class="lede preserve-lines">@lesson.Overview</p>
+            </section>
+            <section class="content-section" aria-labelledby="objectives-heading">
+                <h2 id="objectives-heading">Learning objectives</h2>
+                <ul class="objective-list">
+                    @foreach (var objective in lesson.Objectives)
+                    {
+                        <li><p>@objective.Description</p><SourceLinks SourceIds="objective.SourceIds" Sources="lesson.Sources" /></li>
+                    }
+                </ul>
+            </section>
+            <section class="content-section" aria-labelledby="sequence-heading">
+                <div class="section-heading inline-heading"><h2 id="sequence-heading">Lesson sequence</h2><p>@lesson.Activities.Sum(activity => activity.DurationMinutes) minutes</p></div>
+                <ol class="lesson-sequence">
+                    @{ var elapsedMinutes = 0; }
+                    @foreach (var activity in lesson.Activities)
+                    {
+                        var startMinute = elapsedMinutes;
+                        elapsedMinutes += activity.DurationMinutes;
+                        <li>
+                            <div class="time-block"><strong>@startMinute to @elapsedMinutes</strong>@(" ")<span>minutes</span></div>
+                            <details class="activity-detail">
+                                <summary><h3>@activity.Title</h3></summary>
+                                <div class="disclosure-body">
                                     <p class="preserve-lines">@activity.Instructions</p>
                                     <div class="assessment-check"><h4>Check understanding</h4><p class="preserve-lines">@activity.Assessment</p></div>
                                 </div>
-                            </li>
-                        }
-                    </ol>
-                </section>
-                <section class="content-section"><h2>Assessment questions</h2><ol class="assessment-list">@foreach (var question in lesson.AssessmentQuestions) { <li>@question</li> }</ol></section>
-                <SourceCitations Sources="lesson.Sources" />
-            }
-            else
-            {
-                <section class="content-section"><h2>No completed lesson plan</h2><p>The activity record and review show the saved outcome. Start a new request to create another lesson.</p></section>
-            }
-        </article>
-        <aside class="planning-rail" aria-label="Lesson review and next steps">
-            <ReviewSummary Review="_record.Review" />
-            <section class="rail-section" aria-labelledby="next-step-heading">
-                <h2 id="next-step-heading">Next step</h2>
-                @if (IsReady)
-                {
-                    <a class="button button-secondary full-width" href="@($"/presenter/lessons/{RouteId(Id)}/document")">Download lesson document</a>
-                    <p>Check the lesson and its sources before creating the quiz.</p>
-                    <form method="post" action="@($"/presenter/lessons/{RouteId(Id)}/quiz")">
-                        <AntiforgeryToken />
-                        <button class="button full-width" type="submit">Create five-question quiz</button>
-                    </form>
-                    <p class="field-hint">The quiz remains private until you review and approve it.</p>
-                }
-                else
-                {
-                    <a class="button button-secondary" href="/presenter">Start a new lesson request</a>
-                }
+                            </details>
+                        </li>
+                    }
+                </ol>
             </section>
-            <ActivityTimeline Activities="_record.Activities" />
-        </aside>
-    </div>
+            <details class="disclosure teaching-notes">
+                <summary>Teaching notes</summary>
+                <div class="disclosure-body">
+                    <div class="preparation-grid content-section">
+                        <section><h2>Prior learning</h2>
+                            @if (lesson.Prerequisites.IsDefaultOrEmpty) { <p>No prerequisites were recorded.</p> }
+                            else { <ul>@foreach (var item in lesson.Prerequisites) { <li>@item</li> }</ul> }
+                        </section>
+                        <section><h2>Materials</h2>
+                            @if (lesson.Materials.IsDefaultOrEmpty) { <p>No materials were recorded.</p> }
+                            else { <ul>@foreach (var item in lesson.Materials) { <li>@item</li> }</ul> }
+                        </section>
+                    </div>
+                    <section class="content-section"><h2>Teaching explanation</h2><p class="preserve-lines">@lesson.Explanation</p></section>
+                    <section class="content-section"><h2>Assessment questions</h2><ol class="assessment-list">@foreach (var question in lesson.AssessmentQuestions) { <li>@question</li> }</ol></section>
+                    <p class="field-hint">Created <time datetime="@DisplayText.Timestamp(_record.CreatedAt)">@DisplayText.Date(_record.CreatedAt)</time></p>
+                </div>
+            </details>
+            <SourceCitations Sources="lesson.Sources" />
+        }
+        else
+        {
+            <section class="content-section"><h2>No completed lesson plan</h2><p>Read the recorded events and review, then start a new lesson.</p></section>
+        }
+        <ReviewSummary Review="_record.Review" />
+    </article>
 }
 
 @code {

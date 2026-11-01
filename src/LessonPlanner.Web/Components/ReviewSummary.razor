@@ -1,30 +1,28 @@
-<section class="review-summary" aria-labelledby="review-heading">
-    <h2 id="review-heading">Review</h2>
-    @if (Review is null)
-    {
-        <p>No completed review was recorded.</p>
-    }
-    else
-    {
-        <p class="status-label @(Review.Accepted ? "status-success" : "status-warning")">@(Review.Accepted ? "Review passed" : "Changes needed")</p>
-        @if (!Review.Findings.IsDefaultOrEmpty)
+<details class="disclosure review-summary" open="@(Review is { Accepted: false } || Review is not null && !Review.Findings.IsDefaultOrEmpty && Review.Findings.Any(finding => finding.Severity == ReviewSeverity.Critical))">
+    <summary>Review details</summary>
+    <div class="disclosure-body">
+        @if (Review is null)
         {
-            <ul class="review-findings">
-                @foreach (var finding in Review.Findings)
-                {
-                    <li>
-                        <strong>@DisplayText.Severity(finding.Severity)</strong>
-                        <p class="preserve-lines">@finding.Message</p>
-                    </li>
-                }
-            </ul>
+            <p>No completed review was recorded.</p>
         }
         else
         {
-            <p>No individual review findings were recorded.</p>
+            <p class="status-label @(Review.Accepted ? "status-success" : "status-warning")">@(Review.Accepted ? "Review passed" : "Changes needed")</p>
+            @if (!Review.Findings.IsDefaultOrEmpty)
+            {
+                <ul class="review-findings">
+                    @foreach (var finding in Review.Findings)
+                    {
+                        <li>
+                            <strong>@DisplayText.Severity(finding.Severity)</strong>
+                            <p class="preserve-lines">@finding.Message</p>
+                        </li>
+                    }
+                </ul>
+            }
         }
-    }
-</section>
+    </div>
+</details>
 
 @code {
     [Parameter] public ReviewResult? Review { get; set; }

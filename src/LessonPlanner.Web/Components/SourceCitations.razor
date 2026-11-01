@@ -1,36 +1,37 @@
-<section class="content-section" aria-labelledby="sources-heading">
-    <h2 id="sources-heading">Sources to check</h2>
-    <p class="section-intro">Read these references alongside the lesson. A source link is not a substitute for teacher review.</p>
-    @if (!Sources.Any())
-    {
-        <p>No source references were recorded.</p>
-    }
-    else
-    {
-        <ol class="citation-list">
-            @foreach (var source in Sources)
-            {
-                <li id="@($"source-{source.Id}")">
-                    @if (DisplayText.IsSafeSourceUrl(source.Url))
-                    {
-                        <h3><a href="@source.Url.AbsoluteUri" rel="noreferrer noopener">@source.Title</a></h3>
-                        <p class="source-address">@source.Url.Host</p>
-                    }
-                    else
-                    {
-                        <h3>@source.Title</h3>
-                        <p class="field-hint">Source link unavailable.</p>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(source.Extract))
-                    {
-                        <blockquote class="source-extract">@source.Extract</blockquote>
-                    }
-                    <p class="field-hint">Retrieved <time datetime="@DisplayText.Timestamp(source.RetrievedAt)">@DisplayText.Date(source.RetrievedAt)</time></p>
-                </li>
-            }
-        </ol>
-    }
-</section>
+<details class="disclosure sources">
+    <summary>Sources (@Sources.Count())</summary>
+    <div class="disclosure-body">
+        @if (!Sources.Any())
+        {
+            <p>No source references were recorded.</p>
+        }
+        else
+        {
+            <ol class="citation-list">
+                @foreach (var source in Sources)
+                {
+                    <li id="@($"source-{source.Id}")">
+                        @if (DisplayText.IsSafeSourceUrl(source.Url))
+                        {
+                            <h3><a href="@source.Url.AbsoluteUri" rel="noreferrer noopener">@source.Title</a></h3>
+                            <p class="source-address">@source.Url.Host</p>
+                        }
+                        else
+                        {
+                            <h3>@source.Title</h3>
+                            <p class="field-hint">Source link unavailable.</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(source.Extract))
+                        {
+                            <blockquote class="source-extract">@source.Extract</blockquote>
+                        }
+                        <p class="field-hint">Retrieved <time datetime="@DisplayText.Timestamp(source.RetrievedAt)">@DisplayText.Date(source.RetrievedAt)</time></p>
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+</details>
 
 @code {
     [Parameter] public IEnumerable<SourceReference> Sources { get; set; } = [];

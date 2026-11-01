@@ -1,12 +1,14 @@
 @if (SourceIds.Any())
 {
+    var sources = Sources.ToArray();
     <ul class="source-links" aria-label="Supporting sources">
         @foreach (var sourceId in SourceIds.Distinct(StringComparer.Ordinal))
         {
-            var source = Sources.FirstOrDefault(candidate => candidate.Id == sourceId);
-            if (source is not null)
+            var index = Array.FindIndex(sources, candidate => candidate.Id == sourceId);
+            if (index >= 0)
             {
-                <li><a href="@($"#source-{Uri.EscapeDataString(source.Id)}")">@source.Title</a></li>
+                var source = sources[index];
+                <li><a href="@($"#source-{Uri.EscapeDataString(source.Id)}")" aria-label="@($"Source {index + 1}: {source.Title}")">Source @(index + 1)</a></li>
             }
             else
             {

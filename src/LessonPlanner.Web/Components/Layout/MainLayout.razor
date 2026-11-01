@@ -3,14 +3,13 @@
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="site-header">
     <div class="site-header-inner">
-        <a class="wordmark" href="/" aria-label="Lumero home">Lumero</a>
-        <span class="site-description">Computing lesson workbench</span>
+        <a class="wordmark" href="/" aria-label="Agent demo home">Agent demo</a>
         <nav class="site-navigation" aria-label="Main navigation">
             <AuthorizeView>
                 <Authorized>
                     <AuthorizeView Policy="Presenter" Context="presenterState">
                         <Authorized>
-                            <NavLink href="/presenter">Lesson workbench</NavLink>
+                            <NavLink href="/presenter">New lesson</NavLink>
                         </Authorized>
                     </AuthorizeView>
                     <form method="post" action="/auth/sign-out">
@@ -19,7 +18,7 @@
                     </form>
                 </Authorized>
                 <NotAuthorized>
-                    <a href="/auth/sign-in">Presenter sign-in</a>
+                    <a href="/auth/sign-in">Sign in</a>
                 </NotAuthorized>
             </AuthorizeView>
         </nav>
@@ -29,8 +28,3 @@
 <main id="main-content" class="page-shell" tabindex="-1">
     @Body
 </main>
-
-<footer class="site-footer">
-    <p>Teacher review comes before publication.</p>
-    <p>Classroom quizzes do not ask for pupil names or email addresses.</p>
-</footer>

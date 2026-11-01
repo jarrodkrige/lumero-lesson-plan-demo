@@ -6,31 +6,29 @@
 @inject LessonPlanner.Infrastructure.QuizPolicy PublicationPolicy
 @inject LessonPlanner.Web.Services.QuizLinkVerifier LinkVerifier
 
-<PageTitle>Review quiz | Lumero</PageTitle>
+<PageTitle>Review quiz | Agent demo</PageTitle>
 <HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
 
 @if (_draft is null)
 {
     <UnavailableState Title="Quiz draft unavailable"
-                      Message="This draft could not be found or is not available to your presenter account. Return to your lesson workbench to continue."
-                      Link="/presenter" LinkText="Lesson workbench" />
+                      Message="This draft could not be found or is not available to your presenter account."
+                      Link="/presenter" LinkText="New lesson" />
 }
 else
 {
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/presenter">Lesson workbench</a><a href="@($"/presenter/lessons/{RouteId(_draft.LessonId)}")">Lesson review</a><span>Quiz review</span></nav>
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/presenter">New lesson</a><a href="@($"/presenter/lessons/{RouteId(_draft.LessonId)}")">Lesson</a><span>Quiz</span></nav>
     <header class="page-heading">
         <p class="status-label @(_published is not null ? "status-success" : "status-neutral")">@(_published is not null ? "Published quiz" : "Private quiz draft")</p>
         <h1>@_draft.Content.Title</h1>
-        <p class="lede">Check every question, answer and explanation. The answer key below is for the presenter, not the pupil quiz page.</p>
         <dl class="lesson-facts">
-            <div><dt>Draft version</dt><dd>@_draft.Version</dd></div>
+            <div><dt>Version</dt><dd>@_draft.Version</dd></div>
             <div><dt>Questions</dt><dd>@_draft.Content.Questions.Length</dd></div>
-            <div><dt>Created</dt><dd><time datetime="@DisplayText.Timestamp(_draft.CreatedAt)">@DisplayText.Date(_draft.CreatedAt)</time></dd></div>
         </dl>
     </header>
     <PageNotice Message="@ErrorMessage" />
 
-    <div class="workbench-grid">
+    <div class="quiz-review-grid">
         <article class="paper" aria-label="Private quiz review">
             <ol class="draft-questions">
                 @for (var index = 0; index < _draft.Content.Questions.Length; index++)
@@ -38,8 +36,7 @@ else
                     var question = _draft.Content.Questions[index];
                     <li>
                         <section aria-labelledby="@($"draft-question-{index}")">
-                            <h2 id="@($"draft-question-{index}")">Question @(index + 1)</h2>
-                            <p class="question-prompt">@question.Prompt</p>
+                            <h2 id="@($"draft-question-{index}")"><span class="question-number">Question @(index + 1)</span>@(" ")<span class="question-prompt">@question.Prompt</span></h2>
                             <ol class="review-options">
                                 @foreach (var option in question.Options)
                                 {
@@ -50,60 +47,66 @@ else
                                     </li>
                                 }
                             </ol>
-                            <div class="answer-explanation"><h3>Marking explanation</h3><p class="preserve-lines">@question.Explanation</p></div>
+                            <div class="answer-explanation"><h3>Explanation</h3><p class="preserve-lines">@question.Explanation</p></div>
                             <SourceLinks SourceIds="question.SourceIds" Sources="_draft.Sources" />
                         </section>
                     </li>
                 }
             </ol>
             <SourceCitations Sources="_draft.Sources" />
+            <details class="disclosure">
+                <summary>Draft details</summary>
+                <p class="disclosure-body field-hint">Created <time datetime="@DisplayText.Timestamp(_draft.CreatedAt)">@DisplayText.Date(_draft.CreatedAt)</time></p>
+            </details>
         </article>
-        <aside class="planning-rail" aria-label="Quiz review and publication">
-            <ReviewSummary Review="_draft.Review" />
+        <aside class="publication-panel" aria-label="Quiz review and publication">
+            <p class="publisher-label"><strong>Quiz Publisher</strong><span>MCP action</span></p>
             @if (_published is not null)
             {
-                <section class="rail-section publication-receipt" aria-labelledby="publication-heading">
+                <section class="publication-receipt" aria-labelledby="publication-heading">
                     <h2 id="publication-heading">Publication confirmed</h2>
-                    <p>This quiz has been published. Approval is no longer required for this draft.</p>
                     @if (_isReachable)
                     {
-                        <p><a class="public-quiz-url" href="@_canonicalUrl">@_canonicalUrl</a></p>
-                        <img class="quiz-qr" src="@($"/presenter/drafts/{RouteId(Id)}/qr")" width="224" height="224" alt="QR code to open the published pupil quiz. The same link is shown above." />
-                        <p class="field-hint">Share this link or QR code with your class.</p>
+                        <img class="quiz-qr" src="@($"/presenter/drafts/{RouteId(Id)}/qr")" width="224" height="224" alt="QR code for the published quiz" />
+                        <a class="button button-secondary" href="@_canonicalUrl">Open quiz</a>
+                        <details class="disclosure quiz-link">
+                            <summary>Quiz link</summary>
+                            <p class="disclosure-body"><a class="public-quiz-url" href="@_canonicalUrl">@_canonicalUrl</a></p>
+                        </details>
                     }
                     else
                     {
                         <p class="public-quiz-url">@_canonicalUrl</p>
                         <div class="notice notice-warning" role="status">
                             <h3>Link not yet verified</h3>
-                            <p>Publication is saved, but the pupil page could not be reached. No QR code is shown. Refresh this page to check again before sharing.</p>
+                            <p>Publication is saved, but the pupil page could not be reached. Check again before sharing. No QR code is available yet.</p>
                         </div>
                     }
-                    <p class="field-hint">Quiz expires <time datetime="@DisplayText.Timestamp(_published.ExpiresAt)">@DisplayText.Date(_published.ExpiresAt)</time>.</p>
-                    <a href="@($"/presenter/drafts/{RouteId(Id)}")">Check published link again</a>
+                    <p class="field-hint publication-expiry">Expires <time datetime="@DisplayText.Timestamp(_published.ExpiresAt)">@DisplayText.Date(_published.ExpiresAt)</time>.</p>
+                    <a href="@($"/presenter/drafts/{RouteId(Id)}")">Check link again</a>
                 </section>
             }
             else if (CanApprove)
             {
-                <section class="rail-section approval-section" aria-labelledby="approval-heading">
-                    <h2 id="approval-heading">Your approval publishes the quiz</h2>
-                    <p>Approval lets the Publisher Agent call the real quiz publication tool through MCP. The canonical pupil link appears after publication, with a warning if it cannot be reached. Only the QR code depends on a successful link check.</p>
+                <section class="approval-section" aria-labelledby="approval-heading">
+                    <h2 id="approval-heading">Publish quiz</h2>
                     <form method="post" action="@($"/presenter/drafts/{RouteId(Id)}/publish")" aria-label="Approve quiz publication">
                         <AntiforgeryToken />
                         <input type="hidden" name="version" value="@_draft.Version" />
                         <input type="hidden" name="payloadHash" value="@_draft.PayloadHash" />
                         <div class="approval-choice">
                             <input id="acknowledged" name="acknowledged" type="checkbox" value="yes" required />
-                            <label for="acknowledged">I have checked all five questions, answers and explanations, and approve this version for publication.</label>
+                            <label for="acknowledged">I approve this quiz for publication.</label>
                         </div>
-                        <button class="button full-width" type="submit">Approve and publish quiz</button>
+                        <button class="button full-width" type="submit">Publish quiz</button>
                     </form>
                 </section>
             }
             else
             {
-                <section class="rail-section"><h2>Not ready for publication</h2><p>A quiz must contain exactly five questions and pass review. Return to the lesson to create a new draft.</p><a href="@($"/presenter/lessons/{RouteId(_draft.LessonId)}")">Return to lesson</a></section>
+                <section><h2>Not ready for publication</h2><p>A quiz must contain exactly five questions and pass review.</p><a href="@($"/presenter/lessons/{RouteId(_draft.LessonId)}")">Return to lesson</a></section>
             }
+            <ReviewSummary Review="_draft.Review" />
         </aside>
     </div>
 }

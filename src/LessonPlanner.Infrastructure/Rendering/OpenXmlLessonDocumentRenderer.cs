@@ -19,7 +19,7 @@ public sealed class OpenXmlLessonDocumentRenderer : ILessonDocumentRenderer
         using (var document = WordprocessingDocument.Create(output, WordprocessingDocumentType.Document))
         {
             document.PackageProperties.Title = plan.Title;
-            document.PackageProperties.Creator = "Lumero Lesson Planner";
+            document.PackageProperties.Creator = "Agent demo";
             document.PackageProperties.Description = "Reviewed lesson plan with curriculum citations and retrieval provenance.";
             document.PackageProperties.Created = lesson.CreatedAt.UtcDateTime;
             var mainPart = document.AddMainDocumentPart();

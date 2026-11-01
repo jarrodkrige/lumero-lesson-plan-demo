@@ -1,30 +1,17 @@
 ﻿@page "/"
 @attribute [AllowAnonymous]
 
-<PageTitle>Computing lesson workbench | Lumero</PageTitle>
+<PageTitle>Lesson planner | Agent demo</PageTitle>
 
-<div class="welcome-grid">
-    <section class="welcome-introduction" aria-labelledby="welcome-heading">
-        <h1 id="welcome-heading">Plan, review and share a computing lesson</h1>
-        <p class="lede">A workbench for secondary computing teachers. Turn a focused teaching brief into a lesson with timings, source references and a five-question quiz for your class.</p>
-        <p>You review the lesson and every quiz answer. Nothing is published to pupils until a presenter explicitly approves it.</p>
-        <AuthorizeView Policy="Presenter">
-            <Authorized><a class="button" href="/presenter">Plan a lesson</a></Authorized>
-            <NotAuthorized><a class="button" href="/auth/sign-in">Presenter sign-in</a></NotAuthorized>
-        </AuthorizeView>
-        <p class="field-hint sign-in-note">Presenter access uses your organisation's Microsoft sign-in and is limited to the approved teaching group.</p>
-    </section>
-    <section class="welcome-process" aria-labelledby="process-heading">
-        <h2 id="process-heading">From teaching brief to classroom</h2>
-        <ol class="welcome-steps">
-            <li><h3>Set the brief</h3><p>Choose GCSE (OCR J277) or Key Stage 3, set the lesson length and describe what your class needs.</p></li>
-            <li><h3>Review the lesson</h3><p>Check the objectives, activities and sources. Download the real lesson document when the plan is ready.</p></li>
-            <li><h3>Approve the quiz</h3><p>Review all five questions before publication. Share the confirmed pupil link or its locally generated QR code.</p></li>
-        </ol>
-    </section>
-</div>
+<section class="welcome-introduction" aria-labelledby="welcome-heading">
+    <h1 id="welcome-heading">Plan a computing lesson</h1>
+    <AuthorizeView Policy="Presenter">
+        <Authorized><a class="button" href="/presenter">New lesson</a></Authorized>
+        <NotAuthorized><a class="button" href="/auth/sign-in">Sign in</a></NotAuthorized>
+    </AuthorizeView>
+</section>
 
 <section class="pupil-guidance" aria-labelledby="pupil-heading">
-    <h2 id="pupil-heading">Joining a classroom quiz?</h2>
-    <p>Open the link or scan the QR code your teacher shares. There is no pupil sign-in, and you do not need to enter a name or email address. Your score and answer explanations appear after you submit.</p>
+    <h2 id="pupil-heading">Joining a quiz?</h2>
+    <p>Open your teacher's link or scan their QR code.</p>
 </section>

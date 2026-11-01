@@ -4,7 +4,7 @@
 @inject IQuizStore QuizStore
 @inject ParticipantTickets Tickets
 
-<PageTitle>@(_quiz?.Title ?? "Quiz unavailable") | Lumero</PageTitle>
+<PageTitle>@(_quiz?.Title ?? "Quiz unavailable") | Agent demo</PageTitle>
 <HeadContent><meta name="robots" content="noindex, nofollow" /></HeadContent>
 
 @if (_quiz is null)
@@ -17,8 +17,7 @@ else
     <div class="quiz-page">
         <header class="page-heading">
             <h1>@_quiz.Title</h1>
-            <p class="lede">Five questions. Choose one answer for each, then submit to see your results.</p>
-            <p class="privacy-note">No name, email address or pupil account is needed.</p>
+            <p class="quiz-instruction">Choose one answer per question.</p>
             <p class="field-hint">Available until <time datetime="@DisplayText.Timestamp(_quiz.ExpiresAt)">@DisplayText.Date(_quiz.ExpiresAt)</time>.</p>
         </header>
         <PageNotice Message="@ErrorMessage" />
@@ -46,7 +45,6 @@ else
             }
             <div class="form-actions">
                 <button class="button" type="submit">Submit answers</button>
-                <p>Check your choices first. Submitting saves this attempt and shows your feedback.</p>
             </div>
         </form>
     </div>

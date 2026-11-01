@@ -251,7 +251,7 @@ var webEnvironment = concat(
     { name: 'DataProtection__ManagedIdentityClientId', value: checkedWebClientId }
     { name: 'ReverseProxy__UseFixedHttpsOrigin', value: 'true' }
     { name: 'Foundry__Endpoint', value: checkedFoundryEndpoint }
-    { name: 'Foundry__Deployment', value: 'gpt-4.1' }
+    { name: 'Foundry__Deployment', value: 'gpt-6.1-terra' }
     { name: 'Foundry__ManagedIdentityClientId', value: checkedWebClientId }
   ],
   presenterEnvironment

@@ -1,22 +1,39 @@
-<section class="rail-section" aria-labelledby="activity-heading">
-    <h2 id="activity-heading">Activity record</h2>
-    <p class="field-hint">Saved events from this lesson run, not a live feed.</p>
+<section class="agent-activity" aria-labelledby="activity-heading">
+    <div class="section-heading inline-heading">
+        <h2 id="activity-heading">Agent activity</h2>
+        <span class="field-hint">Latest recorded status</span>
+    </div>
     @if (!Activities.Any())
     {
-        <p>No activity events were recorded.</p>
+        <p class="field-hint">No recorded events.</p>
     }
     else
     {
-        <ol class="activity-timeline">
-            @foreach (var activity in Activities.OrderBy(item => item.Timestamp))
+        var events = Activities.OrderBy(item => item.Timestamp).ToArray();
+        <ol class="agent-strip" aria-label="Latest recorded stage status">
+            @foreach (var activity in events.GroupBy(item => item.Role).Select(group => group.Last()))
             {
-                <li>
-                    <strong>@DisplayText.Role(activity.Role)</strong>
-                    <span class="activity-state">@DisplayText.State(activity.State)</span>
-                    <time datetime="@DisplayText.Timestamp(activity.Timestamp)">@DisplayText.Date(activity.Timestamp)</time>
+                var isApplication = activity.Role is AgentRole.Validation or AgentRole.Persistence;
+                <li class="agent-stage @(isApplication ? "application-step" : null) @($"state-{activity.State.ToString().ToLowerInvariant()}")">
+                    <span class="stage-kind">@(isApplication ? "Application" : "Agent")</span>
+                    <strong class="stage-name">@DisplayText.Role(activity.Role)</strong>
+                    <span class="stage-status">@DisplayText.State(activity.State)</span>
                 </li>
             }
         </ol>
+        <details class="disclosure activity-history">
+            <summary>Recorded events</summary>
+            <ol class="activity-timeline disclosure-body">
+                @foreach (var activity in events)
+                {
+                    <li>
+                        <strong>@DisplayText.Role(activity.Role)</strong>
+                        <span class="activity-state">@DisplayText.State(activity.State)</span>
+                        <time datetime="@DisplayText.Timestamp(activity.Timestamp)">@DisplayText.Date(activity.Timestamp)</time>
+                    </li>
+                }
+            </ol>
+        </details>
     }
 </section>
 

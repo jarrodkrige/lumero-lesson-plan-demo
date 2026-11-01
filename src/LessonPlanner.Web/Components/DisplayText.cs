@@ -17,13 +17,13 @@ public static class DisplayText
 
     public static string Role(AgentRole role) => role switch
     {
-        AgentRole.Orchestrator => "Planning",
-        AgentRole.Curriculum => "Curriculum sources",
-        AgentRole.LessonWriter => "Lesson writing",
-        AgentRole.Reviewer => "Review",
-        AgentRole.QuizPublisher => "Quiz preparation and publication",
+        AgentRole.Orchestrator => "Orchestrator",
+        AgentRole.Curriculum => "Curriculum",
+        AgentRole.LessonWriter => "Writer",
+        AgentRole.Reviewer => "Reviewer",
+        AgentRole.QuizPublisher => "Quiz Publisher",
         AgentRole.Validation => "Checks",
-        AgentRole.Persistence => "Saving",
+        AgentRole.Persistence => "Save",
         _ => "Lesson workflow"
     };
 

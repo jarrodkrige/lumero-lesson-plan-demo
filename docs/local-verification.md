@@ -39,6 +39,16 @@ The approved live sequence established:
 
 The real DOCX, reviewed lesson/quiz text, safe screenshots, QR, exact action times and integrity manifest are retained in the private acceptance evidence. The result capability URL, authentication values and environment-specific identifiers are not published here. Earlier rough timing notes are preserved with corrections from the exact UI timestamps; the private attempt record was written after the lesson click and is not represented as a pre-action receipt. The accepted publication expires on **2 November 2026 at 16:55 UTC**, at the precision displayed by the application. Do not assume that its saved link remains available after expiry. No further inference or publication was performed to address the recorded editorial observations.
 
+## Presentation regression verification
+
+The subsequent presentation cleanup uses the generic **Agent demo** name, concise controls, native disclosure sections and actual recorded role/status events. Checks and Save are labelled as application steps. The quiz publication panel identifies the Quiz Publisher action without inventing an execution history for a draft.
+
+Local verification on 1 November 2026 passed a solution build with no warnings or errors, **107 targeted integration cases** and **105 browser checks**, retaining all forty original browser assertions. The selected integration classes were `PresentationComponentTests`, `WebPresentationTests`, `WebFlowTests`, `WebBoundaryFlowTests`, `McpTransportTests` and `WebSecurityTests`. The complete integration suite was not rerun for this cosmetic change.
+
+The browser checks covered 1440 × 1000 desktop and 390 × 844 phone layouts, keyboard-operated disclosures, source-fragment navigation with JavaScript disabled, retained lesson/source content, generic DOCX creator metadata, immutable approval fields, anonymous marking and initial-view privacy. Rejected and critical review findings were checked through component and persisted-page rendering tests. Seventeen after screenshots, the unchanged twelve-screenshot local baseline, actual production before captures and source-bound command records remain in private engineering evidence. Owned local services were stopped. This is synthetic loopback verification, not new production inference or a comprehensive accessibility audit.
+
+The matching IaC now selects the existing `gpt-6.1-terra` deployment. The historical live acceptance above used the prior model. The presentation checks neither invoke Terra nor establish its output quality, latency, token usage or cost. No agent execution, approval, publication, marking or expiry behaviour was changed.
+
 ## Prerequisites
 
 - .NET SDK selected by `global.json`.

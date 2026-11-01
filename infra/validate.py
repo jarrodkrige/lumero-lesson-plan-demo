@@ -419,7 +419,7 @@ def workload_checks(workloads: dict, source: str) -> None:
         "AzureAd__ClientCredentials__0__TokenExchangeUrl": "api://AzureADTokenExchange/.default",
         "Mcp__Endpoint": "https://${checkedMcpFqdn}/mcp", "Mcp__TokenScope": "api://${checkedMcpApiClientId}/.default",
         "DataProtection__BlobUri": "${storageAccount.properties.primaryEndpoints.blob}dataprotection/lumero-keys.xml",
-        "Foundry__Deployment": "gpt-4.1", "ReverseProxy__UseFixedHttpsOrigin": "true",
+        "Foundry__Deployment": "gpt-6.1-terra", "ReverseProxy__UseFixedHttpsOrigin": "true",
     }.items()}
     expected_web.update({"AllowedHosts": "checkedWebFqdn", "AzureAd__Instance": "environment().authentication.loginEndpoint",
                          "AzureAd__TenantId": "tenantId", "AzureAd__ClientId": "presenterAppClientId",

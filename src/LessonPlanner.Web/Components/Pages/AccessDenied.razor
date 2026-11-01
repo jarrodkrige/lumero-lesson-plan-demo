@@ -2,10 +2,10 @@
 @attribute [AllowAnonymous]
 @inherits ResourcePage
 
-<PageTitle>Presenter access unavailable | Lumero</PageTitle>
+<PageTitle>Presenter access unavailable | Agent demo</PageTitle>
 <UnavailableState Title="This account does not have presenter access"
-                  Message="The lesson workbench is limited to the approved teaching group. Sign in with an approved account, or ask the person who manages the workbench to check your access. Pupil quiz links do not require presenter access."
-                  Link="/auth/sign-in" LinkText="Presenter sign-in" />
+                  Message="Use an approved teaching account, or ask the organiser to check your access."
+                  Link="/auth/sign-in" LinkText="Sign in" />
 
 @code {
     protected override void OnInitialized() => SetStatusCode(StatusCodes.Status403Forbidden);
