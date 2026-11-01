@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -14,6 +15,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Identity.Abstractions;
+using Microsoft.Identity.Client;
+using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using WebApplicationFactory = LessonPlanner.Web.WebApplicationFactory;
@@ -49,6 +53,7 @@ internal sealed class FixedOriginTestHost(WebApplication app, HttpClient backcha
             ["AzureAd:SignedOutCallbackPath"] = "/signout-callback-oidc",
             ["AzureAd:ClientCredentials:0:SourceType"] = "SignedAssertionFromManagedIdentity",
             ["AzureAd:ClientCredentials:0:ManagedIdentityClientId"] = TestData.ClientId,
+            ["AzureAd:ClientCredentials:0:TokenExchangeUrl"] = "api://AzureADTokenExchange/.default",
             ["Presenter:AllowedObjectIds:0"] = TestData.Presenter.ObjectId.ToString("D"),
             ["Mcp:CallerClientId"] = TestData.ClientId,
             ["Mcp:Endpoint"] = "https://mcp.example.org/mcp",
@@ -72,15 +77,18 @@ internal sealed class FixedOriginTestHost(WebApplication app, HttpClient backcha
     }
 
     public static async Task<FixedOriginTestHost> StartAsync(string environment = "Production",
-        IReadOnlyDictionary<string, string?>? overrides = null)
+        IReadOnlyDictionary<string, string?>? overrides = null, Action<IServiceCollection>? configureServices = null)
     {
         var builder = CreateBuilder(environment, overrides);
         WebApplicationFactory.AddApplicationServices(builder);
-        // Only key persistence and remote metadata are replaced. The actual OIDC handler and pipeline run.
+        // Real authentication handlers run; remote metadata, keys and credential/HTTP boundaries are isolated.
         builder.Services.RemoveAll<IDataProtectionProvider>();
         builder.Services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         builder.Services.Configure<KeyManagementOptions>(options => options.XmlRepository = new InMemoryKeyRepository());
         var backchannel = new HttpClient(new RejectNetworkHandler());
+        builder.Services.Replace(ServiceDescriptor.Singleton<IMsalHttpClientFactory>(new FixedHttpClientFactory(backchannel)));
+        builder.Services.Replace(ServiceDescriptor.Singleton<ICredentialsLoader>(
+            new DefaultCredentialsLoader([new RejectManagedIdentityLoader()], null)));
         builder.Services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
         {
             options.Backchannel = backchannel;
@@ -92,6 +100,7 @@ internal sealed class FixedOriginTestHost(WebApplication app, HttpClient backcha
                 EndSessionEndpoint = $"https://login.microsoftonline.com/{TestData.Presenter.TenantId:D}/oauth2/v2.0/logout"
             });
         });
+        configureServices?.Invoke(builder.Services);
         WebApplication? app = null;
         try
         {
@@ -106,6 +115,16 @@ internal sealed class FixedOriginTestHost(WebApplication app, HttpClient backcha
             }).AllowAnonymous().RequireRateLimiting("public");
             app.MapGet("/_test/oidc-sign-out", () => Results.SignOut(new AuthenticationProperties { RedirectUri = "/" },
                 [OpenIdConnectDefaults.AuthenticationScheme])).AllowAnonymous().RequireRateLimiting("public");
+            app.MapGet("/_test/presenter", async (HttpContext context) =>
+            {
+                var authentication = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return Results.Json(new
+                {
+                    tenant = context.User.FindFirst("tid")?.Value,
+                    objectId = context.User.FindFirst("oid")?.Value,
+                    savedTokens = authentication.Properties?.GetTokens().Count() ?? 0
+                });
+            }).RequireAuthorization("Presenter").RequireRateLimiting("public");
             await app.StartAsync();
             return new(app, backchannel);
         }
@@ -134,6 +153,14 @@ internal sealed class FixedOriginTestHost(WebApplication app, HttpClient backcha
             context.Request.Headers["Forwarded"] = "for=198.51.100.99;proto=http;host=attacker.example.org";
         }).WaitAsync(TimeSpan.FromSeconds(15));
 
+    public HttpClient CreateClient()
+    {
+        var client = app.GetTestClient();
+        client.BaseAddress = new Uri(PublicOrigin);
+        client.Timeout = TimeSpan.FromSeconds(15);
+        return client;
+    }
+
     public async ValueTask DisposeAsync()
     {
         await app.StopAsync();
@@ -146,6 +173,18 @@ internal sealed class FixedOriginTestHost(WebApplication app, HttpClient backcha
         private readonly ConcurrentQueue<XElement> elements = new();
         public IReadOnlyCollection<XElement> GetAllElements() => elements.Select(element => new XElement(element)).ToArray();
         public void StoreElement(XElement element, string friendlyName) => elements.Enqueue(new XElement(element));
+    }
+
+    private sealed class FixedHttpClientFactory(HttpClient client) : IMsalHttpClientFactory
+    {
+        public HttpClient GetHttpClient() => client;
+    }
+
+    private sealed class RejectManagedIdentityLoader : ICredentialSourceLoader
+    {
+        public CredentialSource CredentialSource => CredentialSource.SignedAssertionFromManagedIdentity;
+        public Task LoadIfNeededAsync(CredentialDescription credentialDescription, CredentialSourceLoaderParameters? parameters) =>
+            throw new InvalidOperationException("Real managed identity is forbidden in fixed-origin tests.");
     }
 
     private sealed class RejectNetworkHandler : HttpMessageHandler

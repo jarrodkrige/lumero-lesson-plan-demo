@@ -3,7 +3,11 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.TokenCacheProviders;
+using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 
 namespace LessonPlanner.Web.Security;
 
@@ -34,11 +38,24 @@ public static class WebSecurityRegistration
         services.AddScoped<PresenterAccess>();
         services.AddScoped<ParticipantTickets>();
         services.AddCascadingAuthenticationState();
+        // Keep MSAL's byte-sized entries separate from unrelated consumers of IMemoryCache.
+        services.AddKeyedSingleton<IMemoryCache>("PresenterTokens", (_, _) =>
+            new MemoryCache(new MemoryCacheOptions { SizeLimit = 8 * 1024 * 1024 }));
+        services.AddSingleton<IMsalTokenCacheProvider>(provider => new MsalMemoryTokenCacheProvider(
+            provider.GetRequiredKeyedService<IMemoryCache>("PresenterTokens"),
+            provider.GetRequiredService<IOptions<MsalMemoryTokenCacheOptions>>()));
         services.AddAuthentication(options =>
         {
             options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-        }).AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"));
+        }).AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
+            .EnableTokenAcquisitionToCallDownstreamApi()
+            .AddInMemoryTokenCaches(options => options.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(2));
+        services.Configure<MicrosoftIdentityOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
+        {
+            options.MapInboundClaims = false;
+            options.UseFastUnboundedCache = false;
+        });
         services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
         {
             options.MapInboundClaims = false;
@@ -47,12 +64,22 @@ public static class WebSecurityRegistration
             options.SaveTokens = false;
             options.TokenValidationParameters.ValidateIssuer = true;
             options.TokenValidationParameters.ValidIssuer = $"https://login.microsoftonline.com/{tenant:D}/v2.0";
-            options.Events.OnRemoteFailure = context =>
+            options.ProtocolValidator.RequireNonce = true;
+            var tokenValidated = options.Events.OnTokenValidated;
+            options.Events.OnTokenValidated = async context =>
             {
-                context.HandleResponse();
-                context.Response.Redirect("/access-denied");
-                return Task.CompletedTask;
+                // MSAL handles redemption, so ASP.NET skips its token-response protocol checks.
+                if (context.TokenEndpointResponse is not null)
+                    options.ProtocolValidator.ValidateTokenResponse(new()
+                    {
+                        ClientId = options.ClientId,
+                        ProtocolMessage = context.TokenEndpointResponse,
+                        ValidatedIdToken = context.SecurityToken,
+                        Nonce = context.Nonce
+                    });
+                await tokenValidated(context);
             };
+            options.Events.OnRemoteFailure = PresenterSignInFailure.HandleAsync;
         });
         services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
         {

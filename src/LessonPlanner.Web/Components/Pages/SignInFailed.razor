@@ -1,0 +1,19 @@
+@page "/sign-in-failed"
+@attribute [AllowAnonymous]
+@inherits ResourcePage
+
+<PageTitle>Presenter sign-in failed | Lumero</PageTitle>
+<UnavailableState Title="Presenter sign-in could not be completed"
+                  Message="Authentication did not complete, so presenter access could not be checked. Try signing in again. If the problem continues, give the support reference to the person who manages the workbench. Pupil quiz links do not require presenter sign-in."
+                  Link="/auth/sign-in" LinkText="Try presenter sign-in again" />
+@if (Guid.TryParseExact(Reference, "N", out var reference) && reference != Guid.Empty)
+{
+    <p>Support reference: <code>@reference.ToString("N")</code></p>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "reference")]
+    public string? Reference { get; set; }
+
+    protected override void OnInitialized() => SetStatusCode(StatusCodes.Status503ServiceUnavailable);
+}

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace LessonPlanner.IntegrationTests;
 
-public sealed class WebSecurityTests
+public sealed partial class WebSecurityTests
 {
     [Theory]
     [InlineData("anonymous")]
