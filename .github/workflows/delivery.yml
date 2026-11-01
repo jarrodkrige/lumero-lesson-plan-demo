@@ -1,0 +1,130 @@
+name: Reviewed delivery
+run-name: Reviewed source delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full lowercase SHA at the approved branch ref; review this exact source
+        required: true
+        type: string
+      confirmation:
+        description: Type release to request build and separately approved release
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lumero-reviewed-delivery
+  cancel-in-progress: false
+
+env:
+  SOURCE_SHA: ${{ inputs.source_sha }}
+  RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+  AZURE_CORE_OUTPUT: none
+  AZURE_CORE_ONLY_SHOW_ERRORS: 'true'
+  AZURE_CORE_COLLECT_TELEMETRY: 'false'
+  AZURE_CORE_LOGIN_EXPERIENCE_V2: 'false'
+  AZURE_LOGGING_ENABLE_LOG_FILE: 'false'
+  AZURE_CONFIG_DIR: ${{ github.workspace }}/scripts/ci/.state/azure
+  DOCKER_CONFIG: ${{ github.workspace }}/scripts/ci/.state/docker
+
+jobs:
+  authorize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-01
+        with:
+          persist-credentials: false
+      - name: Refuse any unapproved event, branch, source or confirmation
+        run: python3 -B scripts/ci/common.py authorize
+
+  validate:
+    needs: authorize
+    uses: ./.github/workflows/validate.yml
+    permissions:
+      contents: read
+
+  build:
+    needs: [authorize, validate]
+    if: github.repository == 'jarrodkrige/lumero-lesson-plan-demo' && github.ref == 'refs/heads/jarrodkrige-microsoft-lesson-planner-implementation' && github.event_name == 'workflow_dispatch'
+    environment: lumero-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      web_digest: ${{ steps.push.outputs.web_digest }}
+      mcp_digest: ${{ steps.push.outputs.mcp_digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-01
+        with:
+          persist-credentials: false
+      - name: Build production Linux AMD64 images locally without Azure configuration
+        run: python3 -B scripts/ci/images.py build
+      - name: Validate approved source and private build configuration before OIDC
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+        run: python3 -B scripts/ci/common.py prepare-build
+      - name: Federated build identity only, with private provider diagnostics suppressed
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+        run: python3 -B scripts/ci/auth.py build
+      - name: Push only the two production repositories and record actual digests
+        id: push
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+        run: python3 -B scripts/ci/images.py push
+
+  release:
+    needs: [authorize, validate, build]
+    if: github.repository == 'jarrodkrige/lumero-lesson-plan-demo' && github.ref == 'refs/heads/jarrodkrige-microsoft-lesson-planner-implementation' && github.event_name == 'workflow_dispatch'
+    environment: lumero-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      WEB_DIGEST: ${{ needs.build.outputs.web_digest }}
+      MCP_DIGEST: ${{ needs.build.outputs.mcp_digest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-01
+        with:
+          persist-credentials: false
+      - name: Validate approved source, selected digests and app IDs before release OIDC
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          WEB_CONTAINER_APP_ID: ${{ secrets.WEB_CONTAINER_APP_ID }}
+          MCP_CONTAINER_APP_ID: ${{ secrets.MCP_CONTAINER_APP_ID }}
+        run: python3 -B scripts/ci/common.py prepare-release
+      - name: Federated app-scoped release identity only, with private provider diagnostics suppressed
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          WEB_CONTAINER_APP_ID: ${{ secrets.WEB_CONTAINER_APP_ID }}
+          MCP_CONTAINER_APP_ID: ${{ secrets.MCP_CONTAINER_APP_ID }}
+        run: python3 -B scripts/ci/auth.py release
+      - name: Update only existing container images using app-scoped ARM requests
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          WEB_CONTAINER_APP_ID: ${{ secrets.WEB_CONTAINER_APP_ID }}
+          MCP_CONTAINER_APP_ID: ${{ secrets.MCP_CONTAINER_APP_ID }}
+        run: python3 -B scripts/ci/release.py

@@ -2,7 +2,9 @@
 
 A .NET 10 reference application for a secondary computing teacher workshop. A presenter requests a lesson, examines its curriculum sources and review, downloads an editable Word document, then approves publication of a five-question quiz. Participants answer anonymously through server-rendered pages.
 
-**Verification status:** the local synthetic checkpoint passes 361 application unit tests, 91 integration tests, 29 isolated hosting-probe tests and 40 browser checks. The complete solution builds without warnings. Local tests use actual Table persistence and authenticated official MCP transport with explicitly synthetic model and identity services. Live Entra sign-in, Foundry inference, service-managed registration, Azure deployment and external-device access remain unverified and require separate authorisation. There is no production model fallback or authentication bypass.
+**Verification status:** the historical synthetic checkpoint at `ea5e365` passed 361 application unit tests, 91 integration tests, 29 isolated hosting-probe tests and 40 browser checks, with a warning-free solution build. Local tests used actual Table persistence and authenticated official MCP transport with explicitly synthetic model and identity services. The subsequent 210-second Generate amendment passed thirteen dedicated cancellation/error-path cases; that focused result is not a fresh full-suite or browser checkpoint.
+
+Live application Entra sign-in, Foundry inference, service-managed registration, Azure deployment and external-device access remain unverified. Cloud execution requires explicit operational approval and technical validation. There is no production model fallback or authentication bypass.
 
 ## Application boundary
 
@@ -51,7 +53,7 @@ Replace the explicit placeholders using deployment environment variables or loca
 
 The production boundary requires an existing approved Foundry model endpoint, separate Web and MCP managed identities, an MCP API application role, a presenter allowlist, Azure Table state and a private Blob-backed data-protection key ring. The Web confidential client uses a managed-identity federated assertion. See the [stack and integration contract](docs/stack-contract.md) and [configuration guide](docs/configuration.md).
 
-Both containers use port `8080`. MCP is available at `/mcp`; health endpoints are `/health/live` and `/health/ready`. Production Table creation and identity assignments are infrastructure prerequisites, not application startup side effects. Deployment and infrastructure assets are maintained separately from this implementation work.
+Both containers use port `8080`. MCP is available at `/mcp`; health endpoints are `/health/live` and `/health/ready`. Production Table creation and identity assignments are infrastructure prerequisites, not application startup side effects. The [standalone Bicep infrastructure](infra/README.md) separates foundation provisioning from the gated production workloads. The [identity bootstrap contract](docs/identity-bootstrap.md) preserves the separate presenter, MCP, build and release identities. Production Dockerfiles publish only their required project graphs with locked dependencies and non-root runtime images. Compiled templates and built images do not establish live readiness.
 
 The [reproducible checkpoint manifest](docs/checkpoint-manifest.json) records the verified code revision, dependency locks, exact commands, measured results and SHA-256 hashes for the retained workshop evidence. Synthetic runtime captures and raw test output are kept outside the public repository.
 
@@ -71,5 +73,7 @@ The implemented inference path is **application-hosted** and has not been invoke
 - `src\LessonPlanner.AppHost` and `ServiceDefaults`: Aspire composition and service conventions.
 - `probes\LessonPlanner.FoundryHostProbe`: compile-only by default, separately gated hosting experiment.
 - `tests`: focused unit, real local integration, isolated probe tests and reproducible browser-harness code.
+- `infra`: parameterised Bicep foundation and gated production workloads.
+- `.github\workflows` and `scripts\ci`: unprivileged validation and protected, bounded image delivery.
 
 Do not submit secrets, participant personal information, private curriculum reference decks or machine-specific cloud identifiers to this public repository.

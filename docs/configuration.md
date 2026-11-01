@@ -13,11 +13,12 @@ Required settings:
 - `AzureAd__ClientId`: the confidential Web application registration.
 - `AzureAd__ClientCredentials__0__SourceType`: `SignedAssertionFromManagedIdentity`.
 - `AzureAd__ClientCredentials__0__ManagedIdentityClientId`: the Web workload's user-assigned identity client ID, or an empty value for system-assigned identity.
+- `AzureAd__ClientCredentials__0__TokenExchangeUrl`: `api://AzureADTokenExchange/.default` for the documented production federation.
 - `Presenter__AllowedObjectIds__0`, with subsequent numeric entries when required.
 
 Exactly one explicit credential is accepted. Production requires an authorised managed-identity federation relationship for the confidential client. Client secrets and legacy certificate collections are rejected. An explicitly configured `Path` credential and certificate disk path are permitted only in Development or Testing. A local certificate does not grant MCP application permissions.
 
-Configure the Web application's exact HTTPS `/signin-oidc` redirect URI and any authorised sign-out callback separately. Cookie lifetime is fixed at two hours without sliding renewal. Production cookies are Secure and HttpOnly; presenter identity is revalidated against the current tenant and allowlist. Sign-out is an antiforgery-protected POST.
+Configure the Web application's exact HTTPS `/signin-oidc` redirect URI and any authorised sign-out callback separately. The [identity bootstrap contract](identity-bootstrap.md) distinguishes application object IDs, client IDs and managed-identity principal IDs. Cookie lifetime is fixed at two hours without sliding renewal. Production cookies are Secure and HttpOnly; presenter identity is revalidated against the current tenant and allowlist. Sign-out is an antiforgery-protected POST.
 
 ## Independent MCP API
 

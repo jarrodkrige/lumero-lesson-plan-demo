@@ -1,0 +1,58 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Locked build, offline tests and native AMD64 startup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      NUGET_XMLDOC_MODE: skip
+      DOCKER_CONFIG: ${{ github.workspace }}/scripts/ci/.state/docker
+    steps:
+      - name: Check out this event's source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-01
+        with:
+          persist-credentials: false
+      - name: Install the repository-pinned SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5, verified 2026-11-01
+        with:
+          global-json-file: global.json
+      - name: Check delivery guards without credentials or services
+        run: python3 -B scripts/ci/test_delivery.py
+      - name: Locked restore from the approved feed
+        run: dotnet restore LessonPlanner.slnx --locked-mode --source https://packagefeedproxy.microsoft.io/nuget/v3/index.json
+      - name: Build the exact restored solution
+        run: dotnet build LessonPlanner.slnx --no-restore --configuration Release -p:ContinuousIntegrationBuild=true
+      - name: Run application unit tests
+        run: >-
+          dotnet test tests/LessonPlanner.UnitTests/LessonPlanner.UnitTests.csproj
+          --no-build --no-restore --configuration Release
+          --logger 'trx;LogFileName=unit.trx' --results-directory scripts/ci/.state/test-results
+      - name: Run isolated probe tests without models or credentials
+        run: >-
+          dotnet test tests/LessonPlanner.FoundryHostProbe.Tests/LessonPlanner.FoundryHostProbe.Tests.csproj
+          --no-build --no-restore --configuration Release
+          --logger 'trx;LogFileName=probe.trx' --results-directory scripts/ci/.state/test-results
+      - name: Run handler cancellation tests without services or credentials
+        run: >-
+          dotnet test tests/LessonPlanner.IntegrationTests/LessonPlanner.IntegrationTests.csproj
+          --no-build --no-restore --configuration Release
+          --filter 'FullyQualifiedName~LessonEndpointCancellationTests'
+          --logger 'trx;LogFileName=handler-cancellation.trx' --results-directory scripts/ci/.state/test-results
+      - name: Require actual executed passing test cases
+        run: >-
+          python3 -B scripts/ci/verify_trx.py
+          scripts/ci/.state/test-results/unit.trx scripts/ci/.state/test-results/probe.trx
+          scripts/ci/.state/test-results/handler-cancellation.trx
+      - name: Build and start production images on native AMD64 without credentials or egress
+        run: python3 -B scripts/ci/images.py validate

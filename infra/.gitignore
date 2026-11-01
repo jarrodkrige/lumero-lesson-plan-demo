@@ -1,0 +1,6 @@
+# Private execution inputs and local compiler cache are never public artefacts.
+.local/
+.bicep-cache/
+*.local.bicepparam
+*.local.parameters.json
+__pycache__/
