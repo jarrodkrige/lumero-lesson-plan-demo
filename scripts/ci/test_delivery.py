@@ -718,6 +718,20 @@ class ReleaseTests(OfflineCase):
         self.assertEqual(result, {"location": app["location"], "properties": {"template": {"containers": [replacement]}}})
         self.assertEqual(app, original)
 
+    def test_image_patch_omits_server_only_ephemeral_storage(self):
+        for kind, storage in (("web", "4Gi"), ("mcp", "1Gi")):
+            app = app_fixture(kind)
+            release.container(app)["resources"]["ephemeralStorage"] = storage
+            original = deepcopy(app)
+            desired = f"{SERVER}/lumero-{kind}@{DIGESTS[kind]}"
+            result = release.image_patch(app, desired)
+            replacement = deepcopy(release.container(app))
+            replacement["resources"].pop("ephemeralStorage")
+            replacement["image"] = desired
+            with self.subTest(kind=kind):
+                self.assertEqual(result, {"location": app["location"], "properties": {"template": {"containers": [replacement]}}})
+                self.assertEqual(app, original)
+
     def test_non_image_comparison_ignores_only_documented_server_state(self):
         original = app_fixture("web")
         changed = deepcopy(original)
@@ -843,6 +857,84 @@ class ReleaseTests(OfflineCase):
             release.wait_ready(app_id("web"), before, desired, "web", SERVER)
         self.assertEqual(request.call_count, 2)
         self.assertEqual(request.call_args_list[1].kwargs["revision"], "web-fixture--old")
+
+    def test_readiness_accepts_healthy_revision_at_maximum_scale(self):
+        for kind in ("web", "mcp"):
+            before = app_fixture(kind)
+            current = deepcopy(before)
+            desired = f"{SERVER}/lumero-{kind}@{DIGESTS[kind]}"
+            release.container(current)["image"] = desired
+            revision = revision_fixture(current)
+            revision["properties"]["runningState"] = "RunningAtMaxScale"
+            with self.subTest(kind=kind), patch("release.time.monotonic", side_effect=[0, 0, 0, 0, 1, 1]), \
+                    patch("release.rest", side_effect=[current, revision]) as request, patch("release.time.sleep") as sleep:
+                release.wait_ready(app_id(kind), before, desired, kind, SERVER, seconds=1)
+            self.assertEqual(request.call_count, 2)
+            sleep.assert_not_called()
+
+    @staticmethod
+    def platform_readiness_fixture(kind, *, omitted=False):
+        before = app_fixture(kind)
+        template = before["properties"]["template"]
+        template["revisionSuffix"] = ""
+        template["scale"].update({"cooldownPeriod": 300, "pollingInterval": 30})
+        release.container(before)["resources"]["ephemeralStorage"] = "4Gi" if kind == "web" else "1Gi"
+        current = deepcopy(before)
+        desired = f"{SERVER}/lumero-{kind}@{DIGESTS[kind]}"
+        release.container(current)["image"] = desired
+        revision = revision_fixture(current)
+        revision["properties"]["runningState"] = "RunningAtMaxScale"
+        actual = revision["properties"]["template"]
+        actual["containers"][0]["resources"].pop("ephemeralStorage")
+        for settings, key in ((actual, "revisionSuffix"), (actual["scale"], "cooldownPeriod"),
+                              (actual["scale"], "pollingInterval")):
+            if omitted:
+                settings.pop(key)
+            else:
+                settings[key] = None
+        return before, current, revision, desired
+
+    def test_readiness_accepts_platform_template_representations(self):
+        for kind in ("web", "mcp"):
+            for omitted in (False, True):
+                before, current, revision, desired = self.platform_readiness_fixture(kind, omitted=omitted)
+                original = deepcopy((before, current, revision))
+                with self.subTest(kind=kind, omitted=omitted), patch("release.rest", side_effect=[current, revision]) as request:
+                    release.wait_ready(app_id(kind), before, desired, kind, SERVER)
+                    self.assertEqual(request.call_count, 2)
+                    self.assertEqual((before, current, revision), original)
+
+    def test_revision_template_comparison_preserves_configuration_drift_rejection(self):
+        cases = [
+            (("revisionSuffix",), "unapproved"), (("scale", "cooldownPeriod"), 301),
+            (("scale", "pollingInterval"), 31), (("scale", "maxReplicas"), 2),
+            (("containers", 0, "resources", "cpu"), 2), (("containers", 0, "resources", "memory"), "8Gi"),
+            (("containers", 0, "resources", "gpu"), 1), (("containers", 0, "name"), "unapproved"),
+            (("containers", 0, "image"), "unapproved"), (("containers", 0, "env", 0, "value"), "unapproved"),
+            (("unrecognisedSetting",), "unapproved"),
+        ]
+        for kind in ("web", "mcp"):
+            for keys, value in cases:
+                before, current, revision, desired = self.platform_readiness_fixture(kind)
+                change(revision, ("properties", "template") + keys, value)
+                with self.subTest(kind=kind, keys=keys), patch("release.rest", side_effect=[current, revision]) as request, \
+                        self.assertRaises(common.Refusal):
+                    release.wait_ready(app_id(kind), before, desired, kind, SERVER)
+                self.assertEqual(request.call_count, 2)
+
+    def test_maximum_scale_still_requires_active_healthy_provisioned_revision(self):
+        before = app_fixture("web")
+        current = deepcopy(before)
+        desired = f"{SERVER}/lumero-web@{DIGESTS['web']}"
+        release.container(current)["image"] = desired
+        for key, value in (("active", False), ("healthState", "Unknown"), ("provisioningState", "Provisioning")):
+            revision = revision_fixture(current)
+            revision["properties"]["runningState"] = "RunningAtMaxScale"
+            revision["properties"][key] = value
+            with self.subTest(key=key), patch("release.time.monotonic", side_effect=[0, 0, 0, 0, 1, 1]), \
+                    patch("release.rest", side_effect=[current, revision]), patch("release.time.sleep"), \
+                    self.assertRaises(common.Refusal):
+                release.wait_ready(app_id("web"), before, desired, "web", SERVER, seconds=1)
 
     def test_failed_or_mismatched_revision_is_not_accepted(self):
         before = app_fixture("web")

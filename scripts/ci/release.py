@@ -168,8 +168,35 @@ def non_image_settings(app):
     return settings
 
 
+def writable_container(value):
+    replacement = deepcopy(value)
+    resources = replacement.get("resources")
+    if isinstance(resources, dict):
+        # Calculated by Azure and omitted from revision responses and SDK request serialisation.
+        resources.pop("ephemeralStorage", None)
+    return replacement
+
+
+def configured_template(value):
+    if not isinstance(value, dict):
+        return value
+    settings = deepcopy(value)
+    if settings.get("revisionSuffix") in (None, ""):
+        settings.pop("revisionSuffix", None)
+    scale = settings.get("scale")
+    if isinstance(scale, dict):
+        # App and revision GETs represent these documented defaults differently.
+        for key, default in (("cooldownPeriod", 300), ("pollingInterval", 30)):
+            if scale.get(key) is None:
+                scale[key] = default
+    containers = settings.get("containers")
+    if isinstance(containers, list):
+        settings["containers"] = [writable_container(item) if isinstance(item, dict) else item for item in containers]
+    return settings
+
+
 def image_patch(app, image):
-    replacement = deepcopy(container(app))
+    replacement = writable_container(container(app))
     replacement["image"] = image
     # Merge PATCH preserves omitted template/configuration fields; arrays must be copied whole.
     return {"location": app["location"], "properties": {"template": {"containers": [replacement]}}}
@@ -198,10 +225,11 @@ def wait_ready(app_id, before, desired, kind, server, *, seconds=600):
                     and state.get("runningState") not in ("Failed", "Degraded", "Stopped")
                     and state.get("healthState") != "Unhealthy",
                     "The selected revision failed or stopped; no activation or rollback was attempted.")
-            require(state.get("template") == current["properties"]["template"],
+            require(configured_template(state.get("template")) == configured_template(current["properties"]["template"]),
                     "The selected revision template does not match the app's desired configuration.")
             if (state.get("active") is True and state.get("provisioningState") == "Provisioned"
-                    and state.get("healthState") == "Healthy" and state.get("runningState") == "Running"):
+                    and state.get("healthState") == "Healthy"
+                    and state.get("runningState") in ("Running", "RunningAtMaxScale")):
                 return
         delay = min(5, deadline - time.monotonic())
         if delay > 0:

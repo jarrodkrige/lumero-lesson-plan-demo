@@ -147,6 +147,10 @@ The anonymous request-rate partition is shared across participants: **600 reques
 
 All success thresholds are one. Each HTTP probe supplies `Host` equal to that app's exact `AllowedHosts`. The existing application's Table readiness timeout stays **five seconds**, within the six-second HTTP readiness timeout. Compilation cannot prove Linux startup, HTTPS ingress or exact redirects, identity propagation or actual probe acceptance.
 
+Release accepts a selected revision only when it is active, `Provisioned`, `Healthy`, and either `Running` or `RunningAtMaxScale`, with the same writable template and exact image. [Azure documents “Running (at max)” as a running revision with no reported issues](https://learn.microsoft.com/azure/container-apps/revisions#lifecycle). This state is expected with the fixed one-replica maximum and does not authorise a scaling change. Inactive, unhealthy, incompletely provisioned or changed revisions remain unacceptable.
+
+App and revision GET responses represent some platform defaults differently. Revision comparison normalises only an empty/absent revision suffix, absent/null [polling interval (30 seconds) and cooldown period (300 seconds)](https://learn.microsoft.com/azure/container-apps/scale-app#custom), and the [server-only `resources.ephemeralStorage` value](https://learn.microsoft.com/javascript/api/@azure/arm-appcontainers/containerresources?view=azure-node-latest). Image PATCH bodies omit that non-writable storage metadata. CPU, memory, image, environment, probes, scale limits, non-default interval values and every other template field remain compared. The separate non-image app-drift guard is unchanged.
+
 ## Pinned modules and bounded direct resources
 
 Research used the [AVM index](https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-resource-modules/), official module examples/source, MCR version tags and Microsoft Learn resource schemas. The Azure-specific MCP guidance/schema helpers were unavailable; no unrelated toolset or replacement deployment service was used. Every registry reference is pinned and telemetry is explicitly disabled.
